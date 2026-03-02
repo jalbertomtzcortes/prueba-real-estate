@@ -1,75 +1,67 @@
-01 – Especificación Técnica
-
-El objetivo es desarrollar un prototipo funcional que permita interactuar con datos históricos del mercado inmobiliario través de agentes especializados.
-
+# 01 – Especificación Técnica
 Plataforma Agéntica de Inteligencia Inmobiliaria
-______________________________________________
-1. La solución :
 
-Base de datos relacional (SQL)
-Base de datos de grafos (Neo4j)
-API unificada (GraphQL)
-Backend en Node.js
-Frontend en React
-Capa agéntica de orquestación
-___________________________________________
+## 1. Objetivo
 
-2. Arquitectura Propuesta
+Diseñar un prototipo funcional que permita consultar, analizar y visualizar datos históricos del mercado inmobiliario latinoamericano mediante una arquitectura agéntica basada en LLM.
 
-Se adopta una arquitectura modular orientada a servicios desacoplados, compuesta por:
+El sistema debe:
 
-Capa de Presentación (Frontend)
-Capa de API (GraphQL Gateway)
-Capa de Aplicación (Backend Node.js)
-Capa Agéntica (Orquestador)
-Capa de Persistencia (SQL + Grafo)
-Capa de Infraestructura (Docker + CI/CD)
-_________________________________________________
-3. Modelo de Datos
-PostgreSQL
+- Interpretar lenguaje natural
+- Seleccionar agentes especializados
+- Consultar múltiples fuentes de datos
+- Generar insights estructurados
+- Renderizar visualizaciones dinámicas
 
-Tablas:
+---
 
-cities
-zones
-projects
-prices
+## 2. Arquitectura General
 
+La solución se compone de:
 
-Neo4j
+- Frontend (React)
+- Backend (Node.js + Express)
+- API unificada (GraphQL)
+- Base relacional (PostgreSQL)
+- Base de grafos (Neo4j)
+- Capa de orquestación agéntica
+- Infraestructura Docker
 
-Modelo:
+Se prioriza:
 
-(City)-[:HAS_ZONE]->(Zone)
-(Zone)-[:HAS_PROJECT]->(Project)
-_________________________________________________
+- Modularidad
+- Escalabilidad
+- Separación de responsabilidades
+- Seguridad por diseño
 
-4.Diseño de Agentes
-Agente 1 – Consultor Estratégico  (Payload)
+---
 
-{
-  "type": "presentation",
-  "title": "...",
-  "keyMetrics": [],
-  "insights": [],
-  "visualData": []
-}
+## 3. Principios de Diseño
 
-Agente 2 – Analista Bi (Payload)
+- Clean Architecture
+- Separación de capa de dominio y capa de infraestructura
+- Inversión de dependencias
+- Código desacoplado del proveedor LLM
+- Infraestructura reproducible
 
-{
-  "type": "chart",
-  "chartType": "bar | line | heatmap",
-  "labels": [],
-  "series": []
-}
+---
 
-5 Estructura de Carpetas
+## 4. Flujo de Interacción
 
-backend/
-src/
-controllers/
-services/
-agents/
-db/
-utils/
+1. Usuario envía prompt.
+2. Orquestador analiza intención.
+3. Selecciona agente especializado.
+4. Ejecuta consultas SQL / Cypher.
+5. Genera respuesta estructurada.
+6. Frontend renderiza componente dinámico.
+
+---
+
+## 5. Estrategia de Evolución
+
+El prototipo está diseñado para evolucionar hacia:
+
+- SaaS multi-tenant
+- Arquitectura orientada a eventos
+- Microservicios
+- Caching distribuido
