@@ -137,3 +137,12 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# node js
+node_modules/
+.env
+database/*.csv
+database/dataset_clean.csv
+dist/
+logs/
+.DS_Store

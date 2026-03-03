@@ -1,31 +1,18 @@
-# Agentic Real Estate Intelligence Platform
+# Real Estate Analytics Platform
 
-Prototipo funcional de plataforma agéntica para análisis del mercado inmobiliario latinoamericano.
+## Stack
+- PostgreSQL
+- Neo4j
+- Node.js
+- Docker
 
-## Objetivo
+## Arquitectura
+- ETL para transformación de dataset
+- Modelo relacional normalizado
+- Histórico de precios por proyecto
+- Queries analíticas optimizadas
 
-Desarrollar un sistema que combine:
+## Cómo correr el proyecto
 
-- Base relacional (PostgreSQL)
-- Base de grafos (Neo4j)
-- API GraphQL
-- Backend Node.js
-- Frontend React
-- Orquestación agéntica basada en LLM
-
-## Documentación
-
-La documentación técnica se encuentra en la carpeta /docs:
-
-1. Especificación técnica
-2. Modelado de datos
-3. Arquitectura agéntica
-4. Seguridad y DevOps
-
-## Infraestructura
-
-El sistema se ejecuta completamente en Docker.
-
-## Estado del Proyecto
-
-Fase actual: Diseño y documentación arquitectónica
+##
+- docker compose up --build
