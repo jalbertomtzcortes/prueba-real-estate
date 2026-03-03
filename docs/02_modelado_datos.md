@@ -14,6 +14,7 @@ Separación clara entre:
 
 ---
 
+
 ## 2. Modelo Relacional (PostgreSQL)
 
 ### Entidades
@@ -77,42 +78,16 @@ Se evita almacenar histórico de precios en el grafo para mantener eficiencia en
 - Integración futura con data warehouse
 
 
-CREATE TABLE cities (
-  id SERIAL PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL
-);
 
-CREATE TABLE zones (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  city_id INT REFERENCES cities(id),
-  UNIQUE(name, city_id)
-);
 
-CREATE TABLE projects (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  zone_id INT REFERENCES zones(id),
-  UNIQUE(name, zone_id)
-);
+COPY staging_projects(city, zone, project_name, period, price_per_m2)
+FROM '/docker-entrypoint-initdb.d/data/dataset_clean.csv'
+DELIMITER ','
+CSV HEADER;
 
-CREATE TABLE price_history (
-  id SERIAL PRIMARY KEY,
-  project_id INT REFERENCES projects(id),
-  period DATE NOT NULL,
-  price_per_m2 NUMERIC NOT NULL,
-  UNIQUE(project_id, period)
-);
+SELECT COUNT(*) FROM staging_projects;
 
-CREATE TABLE staging_projects (
-  city TEXT,
-  zone TEXT,
-  project_name TEXT,
-  period TEXT,
-  price_per_m2 NUMERIC
-);
-
-///migracion
+///Inserts
 
 INSERT INTO cities (name)
 SELECT DISTINCT trim(convert_from(convert_to(city, 'LATIN1'), 'UTF8'))
@@ -144,8 +119,3 @@ FROM staging_projects s
 JOIN projects p 
   ON trim(s.project_name) = p.name
 WHERE s.price_per_m2 IS NOT NULL;
-
-CREATE INDEX idx_zones_city_id ON zones(city_id);
-CREATE INDEX idx_projects_zone_id ON projects(zone_id);
-CREATE INDEX idx_price_history_project_id ON price_history(project_id);
-CREATE INDEX idx_price_history_period ON price_history(period);
