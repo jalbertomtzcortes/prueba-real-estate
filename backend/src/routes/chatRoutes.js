@@ -1,65 +1,74 @@
 const express = require("express");
-const OpenAI = require("openai");
 const router = express.Router();
-
-const { saveMessage, getLastMessages } = require("../services/chatService");
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const pool = require("../config/database");
 
 router.post("/", async (req, res) => {
   try {
-    const { message, mode, city, growth, average, userId } = req.body;
+    const { message } = req.body;
 
-    const realUserId = userId || "default_user";
-
-    const systemPrompt =
-      mode === "agent"
-        ? `Eres un consultor inmobiliario experto en ${city}.
-Crecimiento: ${growth}%
-Precio promedio: ${average} USD/m2`
-        : `Eres un analista maestro en real estate.
-Ciudad: ${city}
-Crecimiento: ${growth}%
-Precio promedio: ${average} USD/m2`;
-
-    // 1️⃣ Obtener historial desde PostgreSQL
-    const history = await getLastMessages(realUserId);
-
-    // 2️⃣ Guardar mensaje usuario
-    await saveMessage(realUserId, "user", message);
-
-    // 3️⃣ Crear stream
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      stream: true,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...history,
-        { role: "user", content: message }
-      ]
-    });
-
-    res.setHeader("Content-Type", "text/plain");
-    res.setHeader("Transfer-Encoding", "chunked");
-
-    let fullResponse = "";
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || "";
-      fullResponse += content;
-      res.write(content);
+    if (!message) {
+      return res.status(400).json({ error: "Mensaje requerido" });
     }
 
-    // 4️⃣ Guardar respuesta IA
-    await saveMessage(realUserId, "assistant", fullResponse);
+    const text = message.toLowerCase();
 
-    res.end();
+    // =============================
+    // SI PREGUNTA POR CIUDADES
+    // =============================
+    if (
+      text.includes("ciudad") ||
+      text.includes("buscar") ||
+      text.includes("ver")
+    ) {
+      const result = await pool.query(
+        "SELECT DISTINCT name FROM cities ORDER BY name ASC"
+      );
+
+      const cities = result.rows.map(c => c.name);
+
+      return res.json({
+        reply: "Estas son las ciudades disponibles:",
+        cities
+      });
+    }
+
+    // =============================
+    // SI ESCRIBE UNA CIUDAD
+    // =============================
+    const cityResult = await pool.query(
+      "SELECT name FROM cities WHERE LOWER(name) = LOWER($1)",
+      [message]
+    );
+
+    if (cityResult.rows.length > 0) {
+      const city = cityResult.rows[0].name;
+
+      const analytics = await pool.query(
+        "SELECT growth, average_price FROM analytics WHERE city = $1",
+        [city]
+      );
+
+      const growth = analytics.rows[0]?.growth || 0;
+      const average = analytics.rows[0]?.average_price || 0;
+
+      return res.json({
+        reply: `📍 ${city}
+
+Crecimiento: ${growth}%
+Precio promedio: $${average} USD/m²
+
+¿Deseas un análisis más profundo?`
+      });
+    }
+
+    return res.json({
+      reply:
+        "No encontré esa ciudad. Escribe 'ver ciudades' para mostrar opciones."
+    });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error en chat IA" });
+    res.status(500).json({ error: "Error en chat" });
   }
 });
 

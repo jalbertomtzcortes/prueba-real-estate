@@ -21,6 +21,7 @@ services:
   neo4j:
     image: neo4j:5
     container_name: neo4j_db
+    restart: always
     environment:
       NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
     ports:
@@ -32,19 +33,22 @@ services:
   backend:
     build: ./backend
     container_name: backend_app
+    restart: always
     env_file:
       - .env
-    ports:
-      - "4000:4000"
     depends_on:
       - postgres
       - neo4j
+    ports:
+      - "4000:4000"
     volumes:
       - ./database:/app/database
+    command: sh entrypoint.sh
 
   frontend:
     build: ./frontend
     container_name: frontend_app
+    restart: always
     ports:
       - "3000:80"
     depends_on:

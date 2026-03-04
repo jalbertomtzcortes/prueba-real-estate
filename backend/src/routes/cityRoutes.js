@@ -11,17 +11,9 @@ const controller = require("../controllers/cityController");
  *     responses:
  *       200:
  *         description: Lista de ciudades
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/City'
  *       500:
  *         description: Error interno del servidor
  */
-
-
 router.get("/", controller.listCities);
 
 module.exports = router;

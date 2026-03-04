@@ -1,21 +1,38 @@
 const fs = require("fs");
+const iconv = require("iconv-lite");
 const { createObjectCsvWriter } = require("csv-writer");
 
 const inputFile = "/app/database/4S_DataSet_Confidential.csv";
 const outputFile = "/app/database/dataset_clean.csv";
 
-const raw = fs.readFileSync(inputFile, "utf8");
+// =============================
+// 1️⃣ LEER COMO BUFFER
+// =============================
+const rawBuffer = fs.readFileSync(inputFile);
 
-// Elimina cualquier BOM extraño
-const cleanContent = raw.replace(/^\uFEFF/, "").replace(/\r/g, "");
+// =============================
+// 2️⃣ DECODIFICAR CORRECTAMENTE
+// Excel usualmente usa WIN1252
+// =============================
+let raw = iconv.decode(rawBuffer, "win1252");
 
-const lines = cleanContent.split("\n").filter(l => l.trim() !== "");
+// =============================
+// 3️⃣ LIMPIAR BOM Y CARACTERES RAROS
+// =============================
+raw = raw
+  .replace(/^\uFEFF/, "")
+  .replace(/\r/g, "")
+  .normalize("NFC"); // normaliza acentos correctamente
 
+// =============================
+const lines = raw.split("\n").filter(l => l.trim() !== "");
 const headers = lines[0].split(",");
 
-// Periodos empiezan desde índice 3
 const results = [];
 
+// =============================
+// 4️⃣ PROCESAR FILAS
+// =============================
 for (let i = 1; i < lines.length; i++) {
   const columns = lines[i].split(",");
 
@@ -29,7 +46,6 @@ for (let i = 1; i < lines.length; i++) {
 
   for (let j = 3; j < headers.length; j++) {
     let value = columns[j];
-
     if (!value) continue;
 
     value = value.replace(/,/g, "").trim();
@@ -48,9 +64,13 @@ for (let i = 1; i < lines.length; i++) {
   }
 }
 
+// =============================
+// 5️⃣ ESCRIBIR EN UTF-8 LIMPIO
+// =============================
 (async () => {
   const csvWriter = createObjectCsvWriter({
     path: outputFile,
+    encoding: "utf8", // 🔥 FORZAR UTF-8
     header: [
       { id: "city", title: "city" },
       { id: "zone", title: "zone" },
@@ -62,6 +82,6 @@ for (let i = 1; i < lines.length; i++) {
 
   await csvWriter.writeRecords(results);
 
-  console.log("Dataset transformado correctamente");
+  console.log("Dataset transformado correctamente ✅");
   console.log("Total registros generados:", results.length);
 })();

@@ -3,16 +3,26 @@ import { useState, useEffect, useRef } from "react";
 import api from "../services/api";
 
 export default function Dashboard() {
-  const [city, setCity] = useState("Cancún");
-  const [growth, setGrowth] = useState(0);
-  const [average, setAverage] = useState(0);
+  const [city, setCity] = useState(null);
+  const [growth, setGrowth] = useState(null);
+  const [average, setAverage] = useState(null);
 
-  const [chatMode, setChatMode] = useState("agent");
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
+
+  // =============================
+  // FIX ENCODING VISUAL
+  // =============================
+  const fixEncoding = (text) => {
+    try {
+      return decodeURIComponent(escape(text));
+    } catch {
+      return text;
+    }
+  };
 
   // =============================
   // AUTO SCROLL
@@ -22,9 +32,23 @@ export default function Dashboard() {
   }, [messages]);
 
   // =============================
-  // CARGAR MÉTRICAS
+  // SALUDO INICIAL
   // =============================
   useEffect(() => {
+    setMessages([
+      {
+        sender: "bot",
+        text: "Hola 👋 ¿Qué ciudad deseas analizar? Escribe 'ver ciudades' para mostrar opciones."
+      }
+    ]);
+  }, []);
+
+  // =============================
+  // CARGAR MÉTRICAS CUANDO HAY CIUDAD
+  // =============================
+  useEffect(() => {
+    if (!city) return;
+
     const fetchData = async () => {
       try {
         const growthRes = await api.get(
@@ -36,6 +60,17 @@ export default function Dashboard() {
 
         setGrowth(growthRes.data.growth || 0);
         setAverage(avgRes.data.average || 0);
+
+        setMessages(prev => [
+          ...prev,
+          {
+            sender: "bot",
+            text: `📍 ${city}
+
+Crecimiento: ${growthRes.data.growth || 0}%
+Precio promedio: $${avgRes.data.average || 0} USD/m²`
+          }
+        ]);
       } catch (error) {
         console.error("Error cargando métricas", error);
       }
@@ -45,37 +80,7 @@ export default function Dashboard() {
   }, [city]);
 
   // =============================
-  // SALUDO AUTOMÁTICO
-  // =============================
-  useEffect(() => {
-    const hour = new Date().getHours();
-    let greeting = "Hola";
-
-    if (hour < 12) greeting = "Buenos días";
-    else if (hour < 19) greeting = "Buenas tardes";
-    else greeting = "Buenas noches";
-
-    setMessages([
-      {
-        sender: "bot",
-        text: `${greeting}. Soy tu ${
-          chatMode === "agent"
-            ? "Consultor Inmobiliario"
-            : "Analista Maestro"
-        }. ¿Qué deseas analizar en ${city}?`
-      }
-    ]);
-  }, [chatMode, city]);
-
-  // =============================
-  // RESET CONVERSACIÓN
-  // =============================
-  const resetConversation = () => {
-    setMessages([]);
-  };
-
-  // =============================
-  // ENVIAR MENSAJE (STREAMING)
+  // ENVIAR MENSAJE
   // =============================
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -91,53 +96,41 @@ export default function Dashboard() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: userText,
-            mode: chatMode,
-            city,
-            growth,
-            average,
-            userId: "user1"
-          })
-        }
-      );
+      const response = await api.post("/chat", {
+        message: userText
+      });
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      const data = response.data;
 
-      let botMessage = "";
+      // Mensaje principal
+      if (data.reply) {
+        setMessages(prev => [
+          ...prev,
+          { sender: "bot", text: data.reply }
+        ]);
+      }
 
-      setMessages(prev => [
-        ...prev,
-        { sender: "bot", text: "" }
-      ]);
+      // 🔥 Mostrar ciudades como párrafos individuales
+      if (data.cities && data.cities.length > 0) {
+        setMessages(prev => [
+          ...prev,
+          ...data.cities.map(cityName => ({
+            sender: "bot-city",
+            text: fixEncoding(cityName)
+          }))
+        ]);
+      }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        botMessage += chunk;
-
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1].text = botMessage;
-          return updated;
-        });
+      // Si el usuario escribió una ciudad válida
+      if (!data.cities && userText) {
+        setCity(userText);
       }
 
     } catch (error) {
       console.error(error);
       setMessages(prev => [
         ...prev,
-        { sender: "bot", text: "Error conectando con IA." }
+        { sender: "bot", text: "Error conectando con servidor." }
       ]);
     }
 
@@ -148,94 +141,54 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#0f0f14] text-white p-6">
 
       <h1 className="text-3xl font-bold mb-6">
-        Real Estate Intelligence Dashboard
+        Real Estate Intelligence
       </h1>
 
-      {/* SELECT CIUDAD */}
-      <div className="mb-6 flex gap-4 items-center">
-        <select
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="bg-[#1a1a22] p-2 rounded-lg"
-        >
-          <option>Cancún</option>
-          <option>CDMX</option>
-          <option>Monterrey</option>
-          <option>Guadalajara</option>
-        </select>
-
-        <button
-          onClick={resetConversation}
-          className="bg-red-600 px-4 py-2 rounded-lg"
-        >
-          Reset Chat
-        </button>
-      </div>
-
-      {/* MÉTRICAS */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-
-        <div className="bg-[#15151a] p-6 rounded-2xl border border-gray-800">
-          <h2 className="text-gray-400 text-sm">Crecimiento</h2>
-          <p className="text-3xl font-bold text-green-400">
-            {growth}%
-          </p>
-        </div>
-
-        <div className="bg-[#15151a] p-6 rounded-2xl border border-gray-800">
-          <h2 className="text-gray-400 text-sm">Precio Promedio</h2>
-          <p className="text-3xl font-bold text-blue-400">
-            ${average} USD/m²
-          </p>
-        </div>
-
-      </div>
-
       {/* CHAT */}
-      <div className="bg-[#15151a] p-6 rounded-2xl border border-gray-800 h-[500px] flex flex-col">
-
-        {/* BOTONES CAMBIO */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setChatMode("agent")}
-            className={`px-4 py-2 rounded-lg ${
-              chatMode === "agent"
-                ? "bg-purple-600"
-                : "bg-gray-700"
-            }`}
-          >
-            Chat Agente
-          </button>
-
-          <button
-            onClick={() => setChatMode("master")}
-            className={`px-4 py-2 rounded-lg ${
-              chatMode === "master"
-                ? "bg-purple-600"
-                : "bg-gray-700"
-            }`}
-          >
-            Chat Maestro
-          </button>
-        </div>
+      <div className="bg-[#15151a] p-6 rounded-2xl border border-gray-800 h-[600px] flex flex-col">
 
         {/* MENSAJES */}
         <div className="flex-1 overflow-y-auto space-y-3 text-sm mb-4 pr-2">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`p-3 rounded-lg max-w-[80%] ${
-                msg.sender === "bot"
-                  ? "bg-gray-800"
-                  : "bg-blue-600 ml-auto"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
+
+          {messages.map((msg, i) => {
+
+            // Usuario
+            if (msg.sender === "user") {
+              return (
+                <div
+                  key={i}
+                  className="p-3 rounded-lg max-w-[80%] bg-blue-600 ml-auto"
+                >
+                  {msg.text}
+                </div>
+              );
+            }
+
+            // Ciudades listadas
+            if (msg.sender === "bot-city") {
+              return (
+                <p
+                  key={i}
+                  className="p-3 rounded-lg max-w-[80%] bg-gray-800"
+                >
+                  {msg.text}
+                </p>
+              );
+            }
+
+            // Bot normal
+            return (
+              <div
+                key={i}
+                className="p-3 rounded-lg max-w-[80%] bg-gray-800"
+              >
+                {msg.text}
+              </div>
+            );
+          })}
 
           {loading && (
-            <div className="bg-gray-800 p-3 rounded-lg w-fit">
+            <div className="p-3 rounded-lg max-w-[80%] bg-gray-800">
               Escribiendo...
             </div>
           )}
@@ -250,7 +203,7 @@ export default function Dashboard() {
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             className="flex-1 bg-black p-3 rounded-lg"
-            placeholder="Escribe tu pregunta..."
+            placeholder="Escribe tu mensaje..."
           />
           <button
             onClick={sendMessage}
@@ -261,7 +214,6 @@ export default function Dashboard() {
         </div>
 
       </div>
-
     </div>
   );
 }

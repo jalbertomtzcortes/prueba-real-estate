@@ -1,13 +1,17 @@
-const cityService = require("../services/cityService");
+const pool = require("../config/database");
 
-async function listCities(req, res) {
+exports.listCities = async (req, res) => {
   try {
-    const cities = await cityService.getAllCities();
+    const result = await pool.query(
+      "SELECT DISTINCT name FROM cities ORDER BY name ASC"
+    );
+
+    const cities = result.rows.map(row => row.name);
+
     res.json(cities);
+
   } catch (error) {
-    console.error(error);
+    console.error("CITIES ERROR:", error);
     res.status(500).json({ error: "Error fetching cities" });
   }
-}
-
-module.exports = { listCities };
+};
