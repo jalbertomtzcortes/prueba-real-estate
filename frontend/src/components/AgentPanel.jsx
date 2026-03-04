@@ -1,3 +1,4 @@
+import React from "react";
 export default function AgentPanel({ city, growth, average }) {
   if (!city) {
     return (

@@ -34,6 +34,13 @@ CREATE TABLE staging_projects (
   price_per_m2 NUMERIC
 );
 
+CREATE TABLE chat_messages (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(100),
+  role VARCHAR(20),
+  content TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- ÍNDICES
 
 CREATE INDEX idx_zones_city_id ON zones(city_id);
