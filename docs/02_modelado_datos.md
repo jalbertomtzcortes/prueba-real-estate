@@ -69,3 +69,37 @@ Estructura:
 
 Se evita almacenar histórico de precios en el grafo para mantener eficiencia en consultas de relación.
 
+SELECT id,name
+FROM cities
+ORDER BY name;
+
+SELECT 
+    ciudad,
+    COUNT(*) as total_propiedades
+FROM propiedades
+GROUP BY ciudad
+HAVING COUNT(*) > 5
+ORDER BY total_propiedades DESC;
+
+
+
+SELECT 
+    c.name AS city,
+    COUNT(p.id) AS total_projects
+FROM cities c
+JOIN zones z ON z.city_id = c.id
+JOIN projects p ON p.zone_id = z.id
+GROUP BY c.name
+ORDER BY total_projects DESC;
+
+SELECT
+  EXTRACT(YEAR FROM ph.period) AS year,
+  ROUND(AVG(ph.price_per_m2),2) AS avg_price
+FROM price_history ph
+JOIN projects p ON ph.project_id = p.id
+JOIN zones z ON p.zone_id = z.id
+JOIN cities c ON z.city_id = c.id
+WHERE c.id = 13
+GROUP BY year
+ORDER BY year;
+

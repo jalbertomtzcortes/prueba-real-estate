@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE IF NOT EXISTS cities (
   id SERIAL PRIMARY KEY,
   name TEXT UNIQUE NOT NULL
@@ -20,20 +19,20 @@ CREATE TABLE IF NOT EXISTS cities (
 CREATE TABLE IF NOT EXISTS zones (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  city_id INT REFERENCES cities(id),
+  city_id INT REFERENCES cities(id) ON DELETE CASCADE,
   UNIQUE(name, city_id)
 );
 
 CREATE TABLE IF NOT EXISTS projects (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  zone_id INT REFERENCES zones(id),
+  zone_id INT REFERENCES zones(id) ON DELETE CASCADE,
   UNIQUE(name, zone_id)
 );
 
 CREATE TABLE IF NOT EXISTS price_history (
   id SERIAL PRIMARY KEY,
-  project_id INT REFERENCES projects(id),
+  project_id INT REFERENCES projects(id) ON DELETE CASCADE,
   period DATE NOT NULL,
   price_per_m2 NUMERIC NOT NULL,
   UNIQUE(project_id, period)
@@ -52,7 +51,7 @@ CREATE TABLE IF NOT EXISTS staging_projects (
 );
 
 -- ============================================
--- ÍNDICES
+-- ÍNDICES PARA PERFORMANCE BI
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_zones_city_id 
@@ -67,6 +66,9 @@ ON price_history(project_id);
 CREATE INDEX IF NOT EXISTS idx_price_history_period 
 ON price_history(period);
 
+CREATE INDEX IF NOT EXISTS idx_price_history_project_period
+ON price_history(project_id, period);
+
 -- ============================================
 -- LIMPIAR STAGING
 -- ============================================
@@ -75,11 +77,7 @@ TRUNCATE TABLE staging_projects;
 
 -- ============================================
 -- CARGAR CSV
--- IMPORTANTE:
--- En Docker debe estar en /app/database/dataset_clean.csv
 -- ============================================
-
-
 
 \copy staging_projects(city, zone, project_name, period, price_per_m2) FROM '/docker-entrypoint-initdb.d/dataset_clean.csv' DELIMITER ',' CSV HEADER;
 
@@ -124,27 +122,57 @@ ON CONFLICT (name, zone_id) DO NOTHING;
 
 -- ============================================
 -- INSERTAR HISTORIAL DE PRECIOS
--- 🔥 CORREGIDO: period viene como AÑO (ej: 2023)
--- Se convierte a DATE como 2023-01-01
+-- CORREGIDO: soporta formatos:
+-- 2023
+-- Jan-23
+-- 2023-01
 -- ============================================
 
 INSERT INTO price_history (project_id, period, price_per_m2)
-SELECT p.id,
-       to_date(s.period, 'Mon-YY'),
-       s.price_per_m2
+
+SELECT
+p.id,
+
+CASE
+  WHEN s.period ~ '^[0-9]{4}$'
+  THEN to_date(s.period || '-01-01', 'YYYY-MM-DD')
+
+  WHEN s.period ~ '^[A-Za-z]{3}-[0-9]{2}$'
+  THEN to_date(s.period, 'Mon-YY')
+
+  WHEN s.period ~ '^[0-9]{4}-[0-9]{2}$'
+  THEN to_date(s.period || '-01', 'YYYY-MM-DD')
+
+  ELSE NULL
+END,
+
+s.price_per_m2
+
 FROM staging_projects s
-JOIN projects p ON trim(s.project_name) = p.name
+JOIN projects p
+ON trim(s.project_name) = p.name
+
 WHERE s.price_per_m2 IS NOT NULL
+
 ON CONFLICT (project_id, period) DO NOTHING;
 
 -- ============================================
--- MENSAJE FINAL
+-- USUARIO ADMIN
 -- ============================================
 
 INSERT INTO users (name, email, password, role)
 VALUES 
-  ('Administrador', 'admin@example.com', '$2b$10$F2CXg3jJs9eupHHbmDczNu9aGe3E7bd4g8EHr3VRspoSj0.jZdspu', 'admin')
+(
+'Administrador',
+'admin@example.com',
+'$2b$10$F2CXg3jJs9eupHHbmDczNu9aGe3E7bd4g8EHr3VRspoSj0.jZdspu',
+'admin'
+)
 ON CONFLICT (email) DO NOTHING;
+
+-- ============================================
+-- MENSAJE FINAL
+-- ============================================
 
 DO $$
 BEGIN

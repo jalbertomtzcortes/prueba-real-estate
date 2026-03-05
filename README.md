@@ -49,3 +49,64 @@ http://localhost:4000/api-docs
 
 Neo4j
 http://localhost:7474
+
+##BI
+
+🧠 Flujo BI 
+
+1️⃣ Bot:
+
+Seleccione las ciudades a comparar
+
+API:
+
+GET /api/cities
+
+2️⃣ Usuario selecciona
+
+Monterrey
+Guadalajara
+
+3️⃣ Bot
+
+Seleccione periodo
+2021 - 2024
+
+4️⃣ Bot
+
+Seleccione tipo de gráfico
+
+Opciones:
+
+1 Line
+2 Bar
+3 Growth comparison
+
+5️⃣ API
+
+POST /api/analysis/compare-cities
+
+Body:
+
+{
+  "cityIds": [13,5],
+  "from": 2021,
+  "to": 2024
+}
+
+6️⃣ Backend responde
+
+[
+  {
+    "id": 13,
+    "name": "Monterrey",
+    "avg_price": 42000,
+    "growth_percentage": 35.2
+  },
+  {
+    "id": 5,
+    "name": "Guadalajara",
+    "avg_price": 38000,
+    "growth_percentage": 28.4
+  }
+]

@@ -1,29 +1,29 @@
 const jwt = require("jsonwebtoken");
 
-function auth(requiredRole = null) {
+const authMiddleware = (req, res, next) => {
 
-  return (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-    const token = req.headers.authorization?.split(" ")[1];
+  if (!authHeader) {
+    return res.status(401).json({ error: "Token requerido" });
+  }
 
-    if (!token) {
-      return res.status(401).json({ error: "No autorizado" });
-    }
+  const token = authHeader.split(" ")[1];
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  try {
 
-      if (requiredRole && decoded.role !== requiredRole) {
-        return res.status(403).json({ error: "Sin permisos" });
-      }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = decoded;
-      next();
+    req.user = decoded;
 
-    } catch {
-      return res.status(401).json({ error: "Token inválido" });
-    }
-  };
-}
+    next();
 
-module.exports = auth;
+  } catch (error) {
+
+    return res.status(401).json({ error: "Token inválido" });
+
+  }
+
+};
+
+module.exports = authMiddleware;

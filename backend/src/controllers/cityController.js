@@ -10,6 +10,6 @@ exports.listCities = async (req, res) => {
 
   } catch (error) {
     console.error("CITIES ERROR:", error);
-    res.status(500).json({ error: "Error fetching cities" });
+    res.status(500).json({ error: "Error obteniendo ciudades" });
   }
 };
