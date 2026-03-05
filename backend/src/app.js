@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
@@ -18,9 +19,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 FORZAR UTF-8 EN TODAS LAS RESPUESTAS
+// 🔥 Forzar UTF-8 correctamente
 app.use((req, res, next) => {
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Charset", "utf-8");
   next();
 });
 

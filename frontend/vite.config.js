@@ -1,6 +1,5 @@
-export default {
-  server: {
-    host: true,
-    port: 5173
-  }
-}
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  base: '/',
+})

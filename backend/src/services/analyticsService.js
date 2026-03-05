@@ -1,43 +1,70 @@
 const pool = require("../config/database");
 
-exports.getAveragePrice = async (city, from, to) => {
+// =====================================
+// PROMEDIO POR CIUDAD
+// =====================================
+exports.getAveragePrice = async (cityId, from, to) => {
   let query = `
-    SELECT AVG(price_per_m2) as average_price
-    FROM prices p
-    JOIN projects pr ON p.project_id = pr.id
-    JOIN cities c ON pr.city_id = c.id
-    WHERE c.name = $1
+    SELECT AVG(ph.price_per_m2) AS average_price
+    FROM price_history ph
+    JOIN projects p ON ph.project_id = p.id
+    JOIN zones z ON p.zone_id = z.id
+    JOIN cities c ON z.city_id = c.id
+    WHERE c.id = $1
   `;
 
-  const params = [city];
+  const params = [cityId];
 
   if (from && to) {
-    query += " AND period BETWEEN $2 AND $3";
-    params.push(from, to);
+    query += `
+      AND EXTRACT(YEAR FROM ph.period) 
+      BETWEEN $2 AND $3
+    `;
+    params.push(parseInt(from), parseInt(to));
   }
 
   const { rows } = await pool.query(query, params);
-
   return rows[0];
 };
 
-exports.getCityGrowth = async (city, from, to) => {
+
+// =====================================
+// CRECIMIENTO POR CIUDAD
+// =====================================
+exports.getCityGrowth = async (cityId, from, to) => {
   const query = `
+    WITH yearly_avg AS (
+      SELECT 
+        EXTRACT(YEAR FROM ph.period) AS year,
+        AVG(ph.price_per_m2) AS avg_price
+      FROM price_history ph
+      JOIN projects p ON ph.project_id = p.id
+      JOIN zones z ON p.zone_id = z.id
+      JOIN cities c ON z.city_id = c.id
+      WHERE c.id = $1
+      GROUP BY year
+    )
     SELECT 
-      (
-        (AVG(CASE WHEN period = $3 THEN price_per_m2 END) -
-         AVG(CASE WHEN period = $2 THEN price_per_m2 END)
-        )
-        /
-        AVG(CASE WHEN period = $2 THEN price_per_m2 END)
-      ) * 100 AS growth_percentage
-    FROM prices p
-    JOIN projects pr ON p.project_id = pr.id
-    JOIN cities c ON pr.city_id = c.id
-    WHERE c.name = $1;
+      CASE 
+        WHEN MAX(CASE WHEN year = $2 THEN avg_price END) IS NULL
+          OR MAX(CASE WHEN year = $3 THEN avg_price END) IS NULL
+        THEN NULL
+        ELSE (
+          (MAX(CASE WHEN year = $3 THEN avg_price END) -
+           MAX(CASE WHEN year = $2 THEN avg_price END)
+          )
+          /
+          NULLIF(MAX(CASE WHEN year = $2 THEN avg_price END), 0)
+        ) * 100
+      END AS growth_percentage
+    FROM yearly_avg;
   `;
 
-  const { rows } = await pool.query(query, [city, from, to]);
+  const { rows } = await pool.query(query, [
+    cityId,
+    parseInt(from),
+    parseInt(to),
+  ]);
 
   return rows[0];
 };

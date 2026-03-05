@@ -1,5 +1,5 @@
 # Etapa build
-FROM node:20 as build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
@@ -15,5 +15,4 @@ FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]

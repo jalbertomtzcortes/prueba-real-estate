@@ -1,3 +1,7 @@
+-- ============================================
+-- TABLAS PRINCIPALES
+-- ============================================
+
 CREATE TABLE IF NOT EXISTS cities (
   id SERIAL PRIMARY KEY,
   name TEXT UNIQUE NOT NULL
@@ -25,6 +29,10 @@ CREATE TABLE IF NOT EXISTS price_history (
   UNIQUE(project_id, period)
 );
 
+-- ============================================
+-- STAGING TABLE
+-- ============================================
+
 CREATE TABLE IF NOT EXISTS staging_projects (
   city TEXT,
   zone TEXT,
@@ -33,27 +41,41 @@ CREATE TABLE IF NOT EXISTS staging_projects (
   price_per_m2 NUMERIC
 );
 
-CREATE INDEX IF NOT EXISTS idx_zones_city_id ON zones(city_id);
-CREATE INDEX IF NOT EXISTS idx_projects_zone_id ON projects(zone_id);
-CREATE INDEX IF NOT EXISTS idx_price_history_project_id ON price_history(project_id);
-CREATE INDEX IF NOT EXISTS idx_price_history_period ON price_history(period);
+-- ============================================
+-- ÍNDICES
+-- ============================================
 
+CREATE INDEX IF NOT EXISTS idx_zones_city_id 
+ON zones(city_id);
 
+CREATE INDEX IF NOT EXISTS idx_projects_zone_id 
+ON projects(zone_id);
+
+CREATE INDEX IF NOT EXISTS idx_price_history_project_id 
+ON price_history(project_id);
+
+CREATE INDEX IF NOT EXISTS idx_price_history_period 
+ON price_history(period);
+
+-- ============================================
+-- LIMPIAR STAGING
+-- ============================================
 
 TRUNCATE TABLE staging_projects;
 
 -- ============================================
--- CARGAR CSV LIMPIO (GENERADO POR transformDataset.js)
--- IMPORTANTE: Este archivo debe existir en /app/database/
+-- CARGAR CSV
+-- IMPORTANTE:
+-- En Docker debe estar en /app/database/dataset_clean.csv
 -- ============================================
 
-\copy staging_projects(city, zone, project_name, period, price_per_m2)
-FROM '/app/database/dataset_clean.csv'
-DELIMITER ','
-CSV HEADER;
+
+
+\copy staging_projects(city, zone, project_name, period, price_per_m2) FROM '/docker-entrypoint-initdb.d/dataset_clean.csv' DELIMITER ',' CSV HEADER;
+
 
 -- ============================================
--- INSERTAR CIUDADES (SIN DUPLICAR)
+-- INSERTAR CIUDADES
 -- ============================================
 
 INSERT INTO cities (name)
@@ -63,7 +85,7 @@ WHERE city IS NOT NULL
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
--- INSERTAR ZONAS (SIN DUPLICAR)
+-- INSERTAR ZONAS
 -- ============================================
 
 INSERT INTO zones (name, city_id)
@@ -77,7 +99,7 @@ WHERE s.zone IS NOT NULL
 ON CONFLICT (name, city_id) DO NOTHING;
 
 -- ============================================
--- INSERTAR PROYECTOS (SIN DUPLICAR)
+-- INSERTAR PROYECTOS
 -- ============================================
 
 INSERT INTO projects (name, zone_id)
@@ -91,18 +113,21 @@ WHERE s.project_name IS NOT NULL
 ON CONFLICT (name, zone_id) DO NOTHING;
 
 -- ============================================
--- INSERTAR HISTORIAL DE PRECIOS (SIN DUPLICAR)
+-- INSERTAR HISTORIAL DE PRECIOS
+-- 🔥 CORREGIDO: period viene como AÑO (ej: 2023)
+-- Se convierte a DATE como 2023-01-01
 -- ============================================
 
 INSERT INTO price_history (project_id, period, price_per_m2)
 SELECT
   p.id,
-  to_date(s.period, 'Mon-YY'),
+  make_date(s.period::int, 1, 1),
   s.price_per_m2
 FROM staging_projects s
 JOIN projects p 
   ON trim(s.project_name) = p.name
 WHERE s.price_per_m2 IS NOT NULL
+  AND s.period ~ '^[0-9]{4}$'
 ON CONFLICT (project_id, period) DO NOTHING;
 
 -- ============================================

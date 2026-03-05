@@ -3,12 +3,10 @@ const pool = require("../config/database");
 exports.listCities = async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT DISTINCT name FROM cities ORDER BY name ASC"
+      "SELECT id, name FROM cities ORDER BY name ASC"
     );
 
-    const cities = result.rows.map(row => row.name);
-
-    res.json(cities);
+    res.json(result.rows);
 
   } catch (error) {
     console.error("CITIES ERROR:", error);

@@ -1,41 +1,27 @@
+const path = require("path");
 const fs = require("fs");
 const iconv = require("iconv-lite");
 const { createObjectCsvWriter } = require("csv-writer");
 
-const inputFile = "/app/database/4S_DataSet_Confidential.csv";
-const outputFile = "/app/database/dataset_clean.csv";
 
-// =============================
-// 1️⃣ LEER COMO BUFFER
-// =============================
+const inputFile = path.join(__dirname, "../../../database/4S_DataSet_Confidential.csv");
+const outputFile = path.join(__dirname, "../../../database/dataset_clean.csv");
+
 const rawBuffer = fs.readFileSync(inputFile);
 
-// =============================
-// 2️⃣ DECODIFICAR CORRECTAMENTE
-// Excel usualmente usa WIN1252
-// =============================
-let raw = iconv.decode(rawBuffer, "win1252");
 
-// =============================
-// 3️⃣ LIMPIAR BOM Y CARACTERES RAROS
-// =============================
-raw = raw
-  .replace(/^\uFEFF/, "")
-  .replace(/\r/g, "")
-  .normalize("NFC"); // normaliza acentos correctamente
+let raw = iconv.decode(rawBuffer, "latin1");
 
-// =============================
+
+raw = raw.replace(/^\uFEFF/, "").replace(/\r/g, "");
+
 const lines = raw.split("\n").filter(l => l.trim() !== "");
 const headers = lines[0].split(",");
 
 const results = [];
 
-// =============================
-// 4️⃣ PROCESAR FILAS
-// =============================
 for (let i = 1; i < lines.length; i++) {
   const columns = lines[i].split(",");
-
   if (columns.length < 4) continue;
 
   const city = columns[0]?.trim();
@@ -49,7 +35,6 @@ for (let i = 1; i < lines.length; i++) {
     if (!value) continue;
 
     value = value.replace(/,/g, "").trim();
-
     const numericValue = Number(value);
 
     if (!isNaN(numericValue) && numericValue > 0) {
@@ -64,13 +49,9 @@ for (let i = 1; i < lines.length; i++) {
   }
 }
 
-// =============================
-// 5️⃣ ESCRIBIR EN UTF-8 LIMPIO
-// =============================
 (async () => {
   const csvWriter = createObjectCsvWriter({
     path: outputFile,
-    encoding: "utf8", // 🔥 FORZAR UTF-8
     header: [
       { id: "city", title: "city" },
       { id: "zone", title: "zone" },
