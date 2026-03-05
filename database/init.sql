@@ -119,15 +119,12 @@ ON CONFLICT (name, zone_id) DO NOTHING;
 -- ============================================
 
 INSERT INTO price_history (project_id, period, price_per_m2)
-SELECT
-  p.id,
-  make_date(s.period::int, 1, 1),
-  s.price_per_m2
+SELECT p.id,
+       to_date(s.period, 'Mon-YY'),
+       s.price_per_m2
 FROM staging_projects s
-JOIN projects p 
-  ON trim(s.project_name) = p.name
+JOIN projects p ON trim(s.project_name) = p.name
 WHERE s.price_per_m2 IS NOT NULL
-  AND s.period ~ '^[0-9]{4}$'
 ON CONFLICT (project_id, period) DO NOTHING;
 
 -- ============================================

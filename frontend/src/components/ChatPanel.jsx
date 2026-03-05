@@ -12,7 +12,12 @@ export default function ChatPanel({ setAnalysisData }) {
 
   const messagesEndRef = useRef(null);
 
+  // 🔹 Mensaje inicial
   useEffect(() => {
+    resetToInitial();
+  }, []);
+
+  const resetToInitial = () => {
     setMessages([
       {
         sender: "bot",
@@ -20,7 +25,9 @@ export default function ChatPanel({ setAnalysisData }) {
           "Hola 👋 ¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades' para mostrar opciones.",
       },
     ]);
-  }, []);
+    setSelectedCity(null);
+    setAwaitingDates(false);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,7 +41,7 @@ export default function ChatPanel({ setAnalysisData }) {
       { sender: "user", text: city.name },
       {
         sender: "bot",
-        text: `Seleccionaste ${city.name} (ID ${city.id}).\n¿De qué año a qué año?\nFormato: 2023-2024`,
+        text: `Seleccionaste ${city.name}.\n¿De qué año a qué año?\nFormato: 2023-2024`,
       },
     ]);
 
@@ -42,12 +49,17 @@ export default function ChatPanel({ setAnalysisData }) {
   };
 
   const handleDateResponse = async (text) => {
+
     const match = text.match(/^(\d{4})-(\d{4})$/);
 
     if (!match) {
       setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: "Formato inválido. Usa: 2023-2024" },
+        {
+          sender: "bot",
+          text:
+            "No conozco lo que me estás preguntando 🤔\n\nPor favor usa el formato correcto:\n2023-2024",
+        },
       ]);
       return;
     }
@@ -100,50 +112,54 @@ Periodo: ${from} a ${to}
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    const userText = inputMessage;
+    const userText = inputMessage.trim().toLowerCase();
 
-    setMessages((prev) => [...prev, { sender: "user", text: userText }]);
+    setMessages((prev) => [...prev, { sender: "user", text: inputMessage }]);
     setInputMessage("");
 
+    // 🔹 Si está esperando fechas
     if (awaitingDates) {
       handleDateResponse(userText);
       return;
     }
 
-    setLoading(true);
+    // 🔹 Usuario pide ver ciudades
+    if (userText === "ver ciudades") {
 
-    try {
-      const response = await api.post("/chat", {
-        message: userText,
-      });
+      setLoading(true);
 
-      const data = response.data;
+      try {
+        const response = await api.get("/cities");
 
-      if (data.reply) {
         setMessages((prev) => [
           ...prev,
-          { sender: "bot", text: data.reply },
-        ]);
-      }
-
-      if (Array.isArray(data.cities)) {
-        setMessages((prev) => [
-          ...prev,
-          ...data.cities.map((city) => ({
+          { sender: "bot", text: "Selecciona una ciudad:" },
+          ...response.data.map((city) => ({
             sender: "bot-city",
             cityData: city,
           })),
         ]);
+
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { sender: "bot", text: "Error obteniendo ciudades." },
+        ]);
       }
 
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "bot", text: "Error conectando con servidor." },
-      ]);
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    // 🔹 Usuario escribe saludo u otra cosa
+    setMessages((prev) => [
+      ...prev,
+      {
+        sender: "bot",
+        text:
+          "No conozco lo que me estás preguntando 🤔\n\nHola 👋 ¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades' para mostrar opciones.",
+      },
+    ]);
   };
 
   return (
@@ -171,9 +187,6 @@ Periodo: ${from} a ${to}
                 className="block text-left p-3 bg-gray-800 rounded-lg hover:bg-green-600"
               >
                 {city.name}
-                <span className="text-xs ml-2 text-gray-400">
-                  (ID: {city.id})
-                </span>
               </button>
             );
           }
