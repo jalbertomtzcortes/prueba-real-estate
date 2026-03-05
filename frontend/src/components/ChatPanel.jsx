@@ -5,24 +5,26 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
 
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
-  const [selectedCity, setSelectedCity] = useState(null);
+
+  const [selectedCities, setSelectedCities] = useState([]);
   const [awaitingDates, setAwaitingDates] = useState(false);
+
   const messagesEndRef = useRef(null);
 
-  // 🔥 Reiniciar flujo cuando cambia agente
+  // Reiniciar flujo cuando cambia agente
   useEffect(() => {
 
-    setSelectedCity(null);
+    setSelectedCities([]);
     setAwaitingDates(false);
     setAnalysisData(null);
 
     if (agentType === "consultor") {
       setMessages([
-        { sender: "bot", text: "🏢 Consultor Inmobiliario\n\nHola 👋 ¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades'." }
+        { sender: "bot", text: "🏢 Consultor\n\n¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades'." }
       ]);
     } else {
       setMessages([
-        { sender: "bot", text: "📊 Business Intelligence\n\nHola 👋 ¿Qué ciudad analítica deseas evaluar?\nEscribe 'ver ciudades'." }
+        { sender: "bot", text: "📊 Business Intelligence\n\nSelecciona DOS ciudades para comparar.\nEscribe 'ver ciudades'." }
       ]);
     }
 
@@ -33,14 +35,38 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
   }, [messages]);
 
   const handleCityClick = (city) => {
-    setSelectedCity(city);
-    setAwaitingDates(true);
+
+    if (agentType === "consultor") {
+      setSelectedCities([city]);
+      setAwaitingDates(true);
+
+      setMessages(prev => [
+        ...prev,
+        { sender: "user", text: city.name },
+        { sender: "bot", text: "¿Periodo? Formato 2023-2024" }
+      ]);
+
+      return;
+    }
+
+    // BI → permitir 2 ciudades
+    if (selectedCities.length >= 2) return;
+
+    const updated = [...selectedCities, city];
+    setSelectedCities(updated);
 
     setMessages(prev => [
       ...prev,
-      { sender: "user", text: city.name },
-      { sender: "bot", text: "¿De qué año a qué año? Formato: 2023-2024" }
+      { sender: "user", text: city.name }
     ]);
+
+    if (updated.length === 2) {
+      setAwaitingDates(true);
+      setMessages(prev => [
+        ...prev,
+        { sender: "bot", text: "Ingresa periodo 2023-2024" }
+      ]);
+    }
   };
 
   const handleDateResponse = async (text) => {
@@ -50,7 +76,7 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
     if (!match) {
       setMessages(prev => [
         ...prev,
-        { sender: "bot", text: "No conozco lo que me estás preguntando.\nUsa formato 2023-2024" }
+        { sender: "bot", text: "Formato inválido. Usa 2023-2024" }
       ]);
       return;
     }
@@ -58,39 +84,60 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
     const from = match[1];
     const to = match[2];
 
-    const growthRes = await api.get(
-      `/analytics/growth?cityId=${selectedCity.id}&from=${from}&to=${to}`
-    );
-
-    const avgRes = await api.get(
-      `/analytics/average?cityId=${selectedCity.id}&from=${from}&to=${to}`
-    );
-
-    const result = {
-      city: selectedCity.name,
-      from,
-      to,
-      growth: growthRes.data.growth,
-      average: avgRes.data.average,
-    };
-
-    setAnalysisData(result);
-
+    // 🔥 CONSULTOR
     if (agentType === "consultor") {
+
+      const city = selectedCities[0];
+
+      const growth = await api.get(`/analytics/growth?cityId=${city.id}&from=${from}&to=${to}`);
+      const avg = await api.get(`/analytics/average?cityId=${city.id}&from=${from}&to=${to}`);
+
+      setAnalysisData({
+        mode: "single",
+        city: city.name,
+        from,
+        to,
+        growth: growth.data.growth,
+        average: avg.data.average
+      });
+
       setMessages(prev => [
         ...prev,
-        {
-          sender: "bot",
-          text: `📍 ${result.city}\n\nAnálisis estratégico listo.\nPuedes generar el PPT ejecutivo.`
-        }
+        { sender: "bot", text: "Análisis estratégico listo." }
       ]);
-    } else {
+    }
+
+    // 🔥 BI COMPARATIVO
+    if (agentType === "bi") {
+
+      const cityA = selectedCities[0];
+      const cityB = selectedCities[1];
+
+      const growthA = await api.get(`/analytics/growth?cityId=${cityA.id}&from=${from}&to=${to}`);
+      const avgA = await api.get(`/analytics/average?cityId=${cityA.id}&from=${from}&to=${to}`);
+
+      const growthB = await api.get(`/analytics/growth?cityId=${cityB.id}&from=${from}&to=${to}`);
+      const avgB = await api.get(`/analytics/average?cityId=${cityB.id}&from=${from}&to=${to}`);
+
+      setAnalysisData({
+        mode: "compare",
+        from,
+        to,
+        cityA: {
+          name: cityA.name,
+          growth: growthA.data.growth,
+          average: avgA.data.average
+        },
+        cityB: {
+          name: cityB.name,
+          growth: growthB.data.growth,
+          average: avgB.data.average
+        }
+      });
+
       setMessages(prev => [
         ...prev,
-        {
-          sender: "bot",
-          text: `📊 ${result.city}\n\nAnálisis BI listo.\nVisualiza la gráfica en el panel izquierdo.`
-        }
+        { sender: "bot", text: "Comparativo listo. Visualiza la gráfica." }
       ]);
     }
 
@@ -125,41 +172,31 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
 
     setMessages(prev => [
       ...prev,
-      { sender: "bot", text: "No conozco lo que me estás preguntando.\nEscribe 'ver ciudades'." }
+      { sender: "bot", text: "Escribe 'ver ciudades'." }
     ]);
   };
 
   return (
-    <div className="bg-[#15151a] p-6 rounded-2xl border border-gray-800 h-full flex flex-col">
+    <div className="flex flex-col h-full">
 
-      <div className="flex-1 overflow-y-auto space-y-3 text-sm mb-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-3 mb-4">
         {messages.map((msg, i) => {
 
-          if (msg.sender === "user") {
-            return (
-              <div key={i} className="p-3 rounded-lg bg-blue-600 ml-auto max-w-[80%]">
-                {msg.text}
-              </div>
-            );
-          }
+          if (msg.sender === "user")
+            return <div key={i} className="bg-blue-600 p-3 rounded">{msg.text}</div>;
 
-          if (msg.sender === "bot-city") {
+          if (msg.sender === "bot-city")
             return (
               <button
                 key={i}
                 onClick={() => handleCityClick(msg.cityData)}
-                className="block text-left p-3 bg-gray-800 rounded-lg hover:bg-green-600"
+                className="bg-gray-700 p-3 rounded"
               >
                 {msg.cityData.name}
               </button>
             );
-          }
 
-          return (
-            <div key={i} className="p-3 rounded-lg bg-gray-800 whitespace-pre-line">
-              {msg.text}
-            </div>
-          );
+          return <div key={i} className="bg-gray-800 p-3 rounded">{msg.text}</div>;
         })}
         <div ref={messagesEndRef} />
       </div>
@@ -169,16 +206,13 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          className="flex-1 bg-black p-3 rounded-lg"
-          placeholder="Escribe tu mensaje..."
+          className="flex-1 bg-black p-3 rounded"
         />
-        <button
-          onClick={sendMessage}
-          className="bg-green-600 px-6 rounded-lg"
-        >
+        <button onClick={sendMessage} className="bg-green-600 px-4 rounded">
           Enviar
         </button>
       </div>
+
     </div>
   );
 }
