@@ -13,6 +13,7 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 const priceRoutes = require("./routes/priceRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const presentationRoutes = require("./routes/presentation");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // ===============================
 // RUTAS API
 // ===============================
+app.use("/api/auth", authRoutes);
 app.use("/api/cities", cityRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/analytics", analyticsRoutes);

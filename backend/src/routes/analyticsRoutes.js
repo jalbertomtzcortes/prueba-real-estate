@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/analyticsController");
+const auth = require("../middleware/authMiddleware");
 
 /**
  * @swagger
@@ -15,6 +16,8 @@ const controller = require("../controllers/analyticsController");
  *   get:
  *     summary: Obtener promedio de precios por ciudad en un rango
  *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: cityId
@@ -35,7 +38,9 @@ const controller = require("../controllers/analyticsController");
  *           type: string
  *         description: Fecha final (YYYY-MM-DD)
  */
-router.get("/average", controller.averagePrice);
+
+router.get("/average", auth, controller.averagePrice);
+
 
 /**
  * @swagger
@@ -43,6 +48,8 @@ router.get("/average", controller.averagePrice);
  *   get:
  *     summary: Obtener crecimiento porcentual de precios por ciudad
  *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: cityId
@@ -55,14 +62,15 @@ router.get("/average", controller.averagePrice);
  *         required: true
  *         schema:
  *           type: string
- *         description: Fecha inicial (YYYY-MM-DD)
+ *         description: Fecha inicial (YYYY)
  *       - in: query
  *         name: to
  *         required: true
  *         schema:
  *           type: string
- *         description: Fecha final (YYYY-MM-DD)
+ *         description: Fecha final (YYYY)
  */
-router.get("/growth", controller.cityGrowth);
+
+router.get("/growth", auth, controller.cityGrowth);
 
 module.exports = router;

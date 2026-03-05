@@ -21,7 +21,11 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Missing data" });
     }
 
-    // 🔥 Generar contenido IA
+    /*
+    =========================================
+    🔴 PARTE DINÁMICA CON OPENAI (DESACTIVADA)
+    =========================================
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -38,20 +42,36 @@ Ciudad: ${city}
 Periodo: ${from} - ${to}
 Crecimiento: ${growth}%
 Precio promedio: ${average} USD/m2
-
-Incluye:
-- Título atractivo
-- 3 bullet points estratégicos
-- Conclusión ejecutiva
           `,
         },
       ],
     });
 
     const content = completion.choices[0].message.content;
+    */
 
-    // 🔥 Asegurar que carpeta public existe
+    // 🔥 CONTENIDO ESTÁTICO PARA TEST
+    const content = `
+      <h1>Reporte Inmobiliario - ${city}</h1>
+
+      <h2>Periodo ${from} - ${to}</h2>
+
+      <ul>
+        <li>📈 Crecimiento del mercado: ${growth}% anual</li>
+        <li>🏢 Precio promedio: ${average} USD/m2</li>
+        <li>🌎 Alta demanda en zonas premium</li>
+      </ul>
+
+      <p>
+        <strong>Conclusión:</strong><br/>
+        El mercado inmobiliario en ${city} muestra una tendencia positiva 
+        impulsada por inversión extranjera y crecimiento urbano.
+      </p>
+    `;
+
+    // 🔥 Asegurar carpeta public
     const publicDir = path.join(__dirname, "../public");
+
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir);
     }
@@ -62,19 +82,31 @@ Incluye:
       <head>
         <meta charset="UTF-8" />
         <style>
-          body { 
-            font-family: Arial; 
-            padding: 50px; 
-            background:#0f0f14; 
-            color:white; 
+          body {
+            font-family: Arial;
+            padding: 50px;
+            background:#0f0f14;
+            color:white;
           }
-          h1 { color:#00ff88; }
-          ul { margin-top:20px; }
+
+          h1 {
+            color:#00ff88;
+          }
+
+          h2 {
+            margin-top:20px;
+          }
+
+          ul {
+            margin-top:20px;
+          }
         </style>
       </head>
+
       <body>
         ${content}
       </body>
+
     </html>
     `;
 
@@ -82,11 +114,19 @@ Incluye:
 
     fs.writeFileSync(filePath, html);
 
-    return res.json({ success: true });
+    return res.json({
+      success: true,
+      url: "/presentation.html"
+    });
 
   } catch (err) {
+
     console.error("🔥 ERROR PRESENTATION:", err.message);
-    return res.status(500).json({ error: err.message });
+
+    return res.status(500).json({
+      error: err.message
+    });
+
   }
 });
 
