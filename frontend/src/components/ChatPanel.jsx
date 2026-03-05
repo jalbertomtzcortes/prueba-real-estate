@@ -54,7 +54,7 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
       setMessages(prev => [
         ...prev,
         { sender: "user", text: city.name },
-        { sender: "bot", text: "¿Periodo? Formato 2023-2024" }
+        { sender: "bot", text: "¿Escriba el periodo? Formato 2023-2024" }
       ]);
 
       return;
