@@ -1,12 +1,14 @@
 # Real Estate Analytics Platform
 
 ## Stack
-- PostgreSQL
-- Neo4j
-- Node.js
-- Docker
-- React
-- IA
+Backend Node + Express
+PostgreSQL
+Login JWT
+Frontend React
+Dashboard
+Chat AI
+Workspace
+Docker
 ## IA - BOT
 Usuario  - ¿Qué ciudad tiene mayor precio promedio?
 BOT - responderá algo como:
@@ -26,14 +28,18 @@ BOT preguntas
 ¿Dónde conviene invertir?
 ¿Qué ciudades tienen mayor crecimiento?
 Compara Guadalajara vs Monterrey
-##
+## Levantar el proyecto
 
+Como levantar el proyecto 
+- docker compose up --build
+
+Preguntar al Bot por CURL , POSTMAN
 curl -X POST http://localhost:4000/api/ai \
 -H "Content-Type: application/json" \
 -d '{"question":"Que ciudad tiene mayor precio promedio"}'
 
-- docker compose up --build
 
+## URL del proyecto
 
 Front-end 
 http://localhost:3000

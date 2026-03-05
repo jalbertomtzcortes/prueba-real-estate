@@ -1,59 +1,125 @@
 import React, { useState } from "react";
-import api from "../services/api";
+import axios from "axios";
 
-export default function Login({ onLogin }) {
+function Login({ onLogin }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
 
-  try {
-    const res = await api.post("/auth/login", { email, password });
+    e.preventDefault();
 
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("user", JSON.stringify(res.data.user));
+    try {
 
-    onLogin();
+      const response = await axios.post(
+        "http://localhost:4000/api/auth/login",
+        {
+          email,
+          password
+        }
+      );
 
-  } catch {
-    setError("Credenciales incorrectas");
-  }
-};
+      const { token, user } = response.data;
+
+      onLogin(token, user);
+
+    } catch (error) {
+
+      console.error(error);
+      setError("Credenciales incorrectas");
+
+    }
+
+  };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-black">
 
-      <div className="bg-gray-900 p-10 rounded w-96 space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f14]">
 
-        <h1 className="text-2xl text-white">Login</h1>
+      <div className="w-full max-w-md bg-[#17171f] p-10 rounded-xl shadow-2xl border border-gray-800">
 
-        <input
-          placeholder="Email"
-          className="w-full p-3 bg-black text-white"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        {/* LOGO / TITULO */}
+        <div className="text-center mb-8">
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full p-3 bg-black text-white"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <h1 className="text-3xl font-bold text-white">
+            Real Estate Intelligence
+          </h1>
 
-        {error && <p className="text-red-500">{error}</p>}
+          <p className="text-gray-400 text-sm mt-2">
+            Plataforma de análisis inmobiliario
+          </p>
 
-        <button
-          onClick={handleLogin}
-          className="w-full bg-green-600 p-3"
-        >
-          Ingresar
-        </button>
+        </div>
+
+        {/* FORM */}
+        <form onSubmit={handleLogin} className="space-y-5">
+
+          <div>
+
+            <label className="text-sm text-gray-400">
+              Email
+            </label>
+
+            <input
+              type="email"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full mt-1 p-3 rounded-lg bg-[#0f0f14] border border-gray-700 text-white focus:outline-none focus:border-green-500"
+              required
+            />
+
+          </div>
+
+          <div>
+
+            <label className="text-sm text-gray-400">
+              Password
+            </label>
+
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full mt-1 p-3 rounded-lg bg-[#0f0f14] border border-gray-700 text-white focus:outline-none focus:border-green-500"
+              required
+            />
+
+          </div>
+
+          {error && (
+            <div className="text-red-500 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-green-600 hover:bg-green-500 transition p-3 rounded-lg font-semibold"
+          >
+            Iniciar sesión
+          </button>
+
+        </form>
+
+        {/* FOOTER */}
+        <div className="mt-8 text-center text-xs text-gray-500">
+
+          <p>
+            © 2026 Real Estate Intelligence
+          </p>
+
+        </div>
 
       </div>
+
     </div>
+
   );
+
 }
+
+export default Login;
