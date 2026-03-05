@@ -5,6 +5,7 @@ const cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
 const path = require("path");
 
+const authRoutes = require("./routes/authRoutes");
 const swaggerSpec = require("./config/swagger");
 
 const cityRoutes = require("./routes/cityRoutes");
@@ -14,6 +15,7 @@ const priceRoutes = require("./routes/priceRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const presentationRoutes = require("./routes/presentation");
 const aiRoutes = require("./routes/aiRoutes"); // 🔥 NUEVA RUTA
+
 
 const app = express();
 
@@ -33,7 +35,7 @@ app.use((req, res, next) => {
 // =======================
 // SWAGGER
 // =======================
-
+app.use("/api/auth", authRoutes);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // =======================

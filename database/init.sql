@@ -141,6 +141,11 @@ ON CONFLICT (project_id, period) DO NOTHING;
 -- MENSAJE FINAL
 -- ============================================
 
+INSERT INTO users (name, email, password, role)
+VALUES 
+  ('Administrador', 'admin@example.com', '$2b$10$F2CXg3jJs9eupHHbmDczNu9aGe3E7bd4g8EHr3VRspoSj0.jZdspu', 'admin')
+ON CONFLICT (email) DO NOTHING;
+
 DO $$
 BEGIN
   RAISE NOTICE 'Base de datos inicializada correctamente ✅';
