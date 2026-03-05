@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../services/api";
 
-export default function ChatPanel({ setAnalysisData }) {
+export default function ChatPanel({ agentType, setAnalysisData }) {
 
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -12,42 +12,77 @@ export default function ChatPanel({ setAnalysisData }) {
 
   const messagesEndRef = useRef(null);
 
-  // 🔹 Mensaje inicial
+  // 🔥 RESETEAR CHAT CUANDO CAMBIA EL AGENTE
   useEffect(() => {
-    resetToInitial();
-  }, []);
 
-  const resetToInitial = () => {
-    setMessages([
-      {
-        sender: "bot",
-        text:
-          "Hola 👋 ¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades' para mostrar opciones.",
-      },
-    ]);
     setSelectedCity(null);
     setAwaitingDates(false);
-  };
+    setInputMessage("");
+    setAnalysisData(null);
+
+    if (agentType === "consultor") {
+      setMessages([
+        {
+          sender: "bot",
+          text:
+            "🏢 Consultor Inmobiliario\n\nHola 👋 ¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades' para mostrar opciones.",
+        },
+      ]);
+    }
+
+    if (agentType === "bi") {
+      setMessages([
+        {
+          sender: "bot",
+          text:
+            "📊 Business Intelligence\n\nModo analítico activado.\n\nSelecciona una ciudad para iniciar el análisis.\nEscribe 'ver ciudades'.",
+        },
+      ]);
+    }
+
+  }, [agentType]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // =============================
+  // SELECCIÓN DE CIUDAD
+  // =============================
   const handleCityClick = (city) => {
+
     setSelectedCity(city);
 
-    setMessages((prev) => [
-      ...prev,
-      { sender: "user", text: city.name },
-      {
-        sender: "bot",
-        text: `Seleccionaste ${city.name}.\n¿De qué año a qué año?\nFormato: 2023-2024`,
-      },
-    ]);
+    if (agentType === "consultor") {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", text: city.name },
+        {
+          sender: "bot",
+          text:
+            `Seleccionaste ${city.name}.\n¿De qué año a qué año?\nFormato: 2023-2024`,
+        },
+      ]);
+    }
+
+    if (agentType === "bi") {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "user", text: city.name },
+        {
+          sender: "bot",
+          text:
+            `📊 Ciudad analítica: ${city.name}\n\n¿De qué año a qué año deseas el análisis?\nFormato: 2023-2024`,
+        },
+      ]);
+    }
 
     setAwaitingDates(true);
   };
 
+  // =============================
+  // RESPUESTA DE FECHAS
+  // =============================
   const handleDateResponse = async (text) => {
 
     const match = text.match(/^(\d{4})-(\d{4})$/);
@@ -58,7 +93,7 @@ export default function ChatPanel({ setAnalysisData }) {
         {
           sender: "bot",
           text:
-            "No conozco lo que me estás preguntando 🤔\n\nPor favor usa el formato correcto:\n2023-2024",
+            "No conozco lo que me estás preguntando 🤔\n\nUsa el formato: 2023-2024",
         },
       ]);
       return;
@@ -68,6 +103,7 @@ export default function ChatPanel({ setAnalysisData }) {
     const to = match[2];
 
     try {
+
       const growthRes = await api.get(
         `/analytics/growth?cityId=${selectedCity.id}&from=${from}&to=${to}`
       );
@@ -86,18 +122,42 @@ export default function ChatPanel({ setAnalysisData }) {
 
       setAnalysisData(result);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "bot",
-          text: `📍 ${selectedCity.name}
+      if (agentType === "consultor") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "bot",
+            text:
+`📍 ${result.city}
 
 Periodo: ${from} a ${to}
 
 📈 Crecimiento: ${result.growth}%
-💰 Precio promedio: $${result.average} USD/m²`,
-        },
-      ]);
+💰 Precio promedio: $${result.average} USD/m²
+
+Recomendación estratégica disponible.`,
+          },
+        ]);
+      }
+
+      if (agentType === "bi") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "bot",
+            text:
+`📊 Análisis BI completado
+
+Ciudad: ${result.city}
+Periodo: ${from} - ${to}
+
+📈 Growth: ${result.growth}%
+💰 Average: $${result.average} USD/m²
+
+Puedes cambiar ciudad para comparar.`,
+          },
+        ]);
+      }
 
     } catch {
       setMessages((prev) => [
@@ -109,21 +169,30 @@ Periodo: ${from} a ${to}
     setAwaitingDates(false);
   };
 
+  // =============================
+  // ENVÍO MENSAJE
+  // =============================
   const sendMessage = async () => {
+
     if (!inputMessage.trim()) return;
 
+    const originalText = inputMessage;
     const userText = inputMessage.trim().toLowerCase();
 
-    setMessages((prev) => [...prev, { sender: "user", text: inputMessage }]);
+    setMessages((prev) => [
+      ...prev,
+      { sender: "user", text: originalText },
+    ]);
+
     setInputMessage("");
 
-    // 🔹 Si está esperando fechas
+    // Si estamos esperando fechas
     if (awaitingDates) {
       handleDateResponse(userText);
       return;
     }
 
-    // 🔹 Usuario pide ver ciudades
+    // Ver ciudades
     if (userText === "ver ciudades") {
 
       setLoading(true);
@@ -151,13 +220,13 @@ Periodo: ${from} a ${to}
       return;
     }
 
-    // 🔹 Usuario escribe saludo u otra cosa
+    // Cualquier otra cosa
     setMessages((prev) => [
       ...prev,
       {
         sender: "bot",
         text:
-          "No conozco lo que me estás preguntando 🤔\n\nHola 👋 ¿Qué ciudad deseas analizar?\nEscribe 'ver ciudades' para mostrar opciones.",
+          "No conozco lo que me estás preguntando 🤔\n\nEscribe 'ver ciudades' para continuar.",
       },
     ]);
   };
@@ -171,7 +240,10 @@ Periodo: ${from} a ${to}
 
           if (msg.sender === "user") {
             return (
-              <div key={i} className="p-3 rounded-lg bg-blue-600 ml-auto max-w-[80%]">
+              <div
+                key={i}
+                className="p-3 rounded-lg bg-blue-600 ml-auto max-w-[80%]"
+              >
                 {msg.text}
               </div>
             );
@@ -192,7 +264,10 @@ Periodo: ${from} a ${to}
           }
 
           return (
-            <div key={i} className="p-3 rounded-lg bg-gray-800 whitespace-pre-line">
+            <div
+              key={i}
+              className="p-3 rounded-lg bg-gray-800 whitespace-pre-line"
+            >
               {msg.text}
             </div>
           );
@@ -200,7 +275,7 @@ Periodo: ${from} a ${to}
 
         {loading && (
           <div className="p-3 rounded-lg bg-gray-800">
-            Escribiendo...
+            Cargando...
           </div>
         )}
 
