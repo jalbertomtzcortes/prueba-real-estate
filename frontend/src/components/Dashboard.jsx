@@ -15,7 +15,7 @@ export default function Dashboard({ onLogout }) {
     <div className="h-screen bg-[#0f0f14] text-white flex flex-col">
 
       {/* HEADER */}
-      <div className="p-4 border-b border-gray-800 flex justify-between items-center relative">
+      <div className="p-4 border-b border-gray-800 flex justify-between items-center">
 
         <h1 className="text-2xl font-bold">
           Real Estate Intelligence
@@ -30,15 +30,16 @@ export default function Dashboard({ onLogout }) {
 
           {/* USER MENU */}
           <div className="relative">
+
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700"
+              className="bg-gray-800 px-4 py-2 rounded-lg"
             >
               {user?.name || "Usuario"} ⌄
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-[#1a1a22] border border-gray-700 rounded-lg shadow-lg">
+              <div className="absolute right-0 mt-2 w-48 bg-[#1a1a22] border border-gray-700 rounded-lg">
 
                 <div className="px-4 py-3 text-sm border-b border-gray-700">
                   <p className="font-semibold">{user?.name}</p>
@@ -46,10 +47,7 @@ export default function Dashboard({ onLogout }) {
                 </div>
 
                 <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onLogout();
-                  }}
+                  onClick={onLogout}
                   className="w-full text-left px-4 py-3 hover:bg-red-600"
                 >
                   Cerrar sesión
@@ -57,6 +55,7 @@ export default function Dashboard({ onLogout }) {
 
               </div>
             )}
+
           </div>
 
         </div>
@@ -65,14 +64,13 @@ export default function Dashboard({ onLogout }) {
       {/* MAIN */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* LEFT WORKSPACE */}
         <div className="w-1/2 border-r border-gray-800 overflow-y-auto p-6">
           <Workspace agentType={agentType} data={analysisData} />
         </div>
 
-        {/* RIGHT CHAT */}
         <div className="w-1/2 p-6">
           <ChatPanel
+            key={agentType}
             agentType={agentType}
             setAnalysisData={setAnalysisData}
           />

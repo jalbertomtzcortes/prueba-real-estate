@@ -13,46 +13,52 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 const priceRoutes = require("./routes/priceRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const presentationRoutes = require("./routes/presentation");
-const authRoutes = require("./routes/authRoutes");
+const aiRoutes = require("./routes/aiRoutes"); // 🔥 NUEVA RUTA
 
 const app = express();
 
-// ===============================
-// MIDDLEWARES BASE
-// ===============================
+// =======================
+// MIDDLEWARE
+// =======================
+
 app.use(cors());
 app.use(express.json());
 
-// Forzar UTF-8 correctamente
+// UTF8
 app.use((req, res, next) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   next();
 });
 
-// ===============================
+// =======================
 // SWAGGER
-// ===============================
+// =======================
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// ===============================
-// RUTAS API
-// ===============================
-app.use("/api/auth", authRoutes);
+// =======================
+// API ROUTES
+// =======================
+
 app.use("/api/cities", cityRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/prices", priceRoutes);
 app.use("/api/chat", chatRoutes);
 
-// 🔥 PRESENTATION ROUTE
+// 🔥 AI ANALYSIS
+app.use("/api/ai", aiRoutes);
+
+// 🔥 PRESENTATION
 app.use("/api/presentation", presentationRoutes);
 
-// 🔥 SERVIR ARCHIVOS ESTÁTICOS (presentation.html)
+// archivos html
 app.use(express.static(path.join(__dirname, "public")));
 
-// ===============================
-// HEALTH CHECK
-// ===============================
+// =======================
+// HEALTH
+// =======================
+
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
