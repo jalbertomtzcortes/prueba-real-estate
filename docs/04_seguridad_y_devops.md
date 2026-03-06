@@ -40,10 +40,10 @@ Servicios orquestados:
 
 ## 5. CI/CD
 
-Flujo recomendado:
-GitHub Actions
+Flujo actual del proyecto:
+- Ejecución local con Docker Compose.
+- CI/CD cloud opcional (no requerido para operación local).
 
 ---
-
 
 

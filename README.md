@@ -51,6 +51,10 @@ docker compose down -v
 docker compose up --build
 ```
 
+## Alcance de Entorno
+- Este proyecto está configurado para ejecutarse en entorno local.
+- No requiere dominio público ni deploy en Heroku para uso normal.
+
 Si ya tienes volúmenes y solo quieres levantar:
 ```bash
 docker compose up --build
@@ -111,10 +115,11 @@ query {
   - reinicia con `docker compose down -v` y vuelve a levantar.
 - Si frontend muestra bundle antiguo:
   - reconstruye con `docker compose up --build`.
+- Si ves `ERR_CONNECTION_TIMED_OUT` a una IP externa:
+  - valida `frontend/.env` con `VITE_API_URL=http://localhost:4000/api`
+  - reconstruye frontend para regenerar `dist`.
 - Si Neo4j falla auth por datos viejos:
   - elimina volúmenes (`down -v`) y vuelve a iniciar.
 
 ## Documentación Adicional
 - Uso app: [docs/05_uso_app_consultor_bi.md](docs/05_uso_app_consultor_bi.md)
-
-

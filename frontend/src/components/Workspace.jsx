@@ -6,9 +6,9 @@ export default function Workspace({ agentType, data }) {
   if (!data) {
     return (
       <div className="h-full rounded-2xl border border-gray-800 bg-[#15151a] p-8">
-        <p className="text-sm text-gray-400">
-          Selecciona dos ciudades en el panel derecho para ejecutar el flujo del
-          agente.
+        <p className="text-xl text-white font-medium leading-relaxed">
+          Interactúa con el chat del panel derecho para seleccionar ciudades y
+          fechas, y luego generar el análisis.
         </p>
       </div>
     );

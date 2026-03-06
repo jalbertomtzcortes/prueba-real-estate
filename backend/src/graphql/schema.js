@@ -39,6 +39,8 @@ const Query = new GraphQLObjectType({
       },
 
       resolve: async (_, args) => {
+        if (!driver) return [];
+
         const session = driver.session();
         try {
           const result = await session.run(

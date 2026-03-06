@@ -4,6 +4,11 @@ const csv = require("csv-parser");
 const driver = require("../config/neo4j");
 
 async function loadData() {
+  if (!driver) {
+    console.warn("⚠️ Seed Neo4j omitido: driver no configurado");
+    return;
+  }
+
   const filePath = path.join(__dirname, "../dataset/dataset_clean.csv");
   const cities = new Set();
   const zonesMap = new Map();

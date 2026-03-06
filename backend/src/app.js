@@ -55,6 +55,15 @@ app.use("/graphql", graphqlHTTP({
 // HEALTH
 // ===============================
 
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    service: "real-estate-backend",
+    docs: "/api-docs",
+    health: "/health",
+  });
+});
+
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
