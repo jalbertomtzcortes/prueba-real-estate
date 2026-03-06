@@ -1,25 +1,40 @@
 const OpenAI = require("openai");
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-exports.fixTextWithAI = async (text) => {
+exports.createPresentation = async (city1, city2, growth) => {
+
+  const prompt = `
+Create a real estate investment presentation.
+
+Cities:
+${city1.name} growth ${city1.growth_percentage}%
+${city2.name} growth ${city2.growth_percentage}%
+
+Return JSON format:
+
+{
+slides:[
+{title:"Market Overview",content:""},
+{title:"City Comparison",content:""},
+{title:"Investment Opportunity",content:""},
+{title:"Recommendation",content:""}
+]
+}
+`;
+
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
-        role: "system",
-        content:
-          "You receive corrupted Spanish text with encoding issues like 'CancÃºn'. Return ONLY the correctly written Spanish text. No explanations.",
-      },
-      {
         role: "user",
-        content: text,
-      },
+        content: prompt
+      }
     ],
-    temperature: 0,
+    temperature: 0.7
   });
 
-  return completion.choices[0].message.content.trim();
+  return JSON.parse(completion.choices[0].message.content);
 };

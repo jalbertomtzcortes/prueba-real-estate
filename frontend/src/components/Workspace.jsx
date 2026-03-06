@@ -1,16 +1,31 @@
 import React from "react";
-import BIWidgets from "./BIWidgets";
+import { useState } from "react";
+import AgentSelector from "./AgentSelector";
+import BIWorkspace from "./BIWorkspace";
+import RealEstateWorkspace from "./RealEstateWorkspace";
 
-export default function Workspace({ data }) {
+export default function Workspace() {
 
-  if (!data) {
-    return (
-      <div className="text-gray-400">
-        Esperando análisis...
-      </div>
-    );
-  }
+  const [agent, setAgent] = useState(null);
+  const [city, setCity] = useState("");
 
-  return <BIWidgets data={data} />;
+  return (
 
+    <div>
+
+      <AgentSelector
+        onSelectAgent={setAgent}
+        selectedCity={city}
+        setSelectedCity={setCity}
+      />
+
+      {agent === "bi" && <BIWorkspace city={city} />}
+
+      {agent === "real_estate" && (
+        <RealEstateWorkspace city={city} />
+      )}
+
+    </div>
+
+  );
 }

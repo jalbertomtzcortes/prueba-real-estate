@@ -1,4 +1,4 @@
-const db = require("../config/database");
+const pool = require("../config/database");
 
 exports.compareCities = async (req, res) => {
 
@@ -6,11 +6,8 @@ exports.compareCities = async (req, res) => {
 
     const { city1, city2, from, to } = req.query;
 
-    if (!city1 || !city2 || !from || !to) {
-      return res.status(400).json({
-        error: "Faltan parámetros"
-      });
-    }
+    const fromDate = `${from}-01-01`;
+    const toDate = `${to}-12-31`;
 
     const query = `
       SELECT
@@ -24,39 +21,41 @@ exports.compareCities = async (req, res) => {
       WHERE c.id IN ($1,$2)
       AND ph.period BETWEEN $3 AND $4
       GROUP BY c.name, year
-      ORDER BY year
+      ORDER BY year;
     `;
 
-    const result = await db.query(query, [
+    const result = await pool.query(query, [
       city1,
       city2,
-      `${from}-01-01`,
-      `${to}-12-31`
+      fromDate,
+      toDate
     ]);
 
-    const cityData = {};
+    const cities = {};
 
     result.rows.forEach(row => {
 
-      if (!cityData[row.city]) {
-        cityData[row.city] = [];
+      if (!cities[row.city]) {
+        cities[row.city] = [];
       }
 
-      cityData[row.city].push({
+      cities[row.city].push({
         year: row.year,
         avg_price: Number(row.avg_price)
       });
 
     });
 
-    res.json(cityData);
+    res.json({
+      history: cities
+    });
 
   } catch (error) {
 
     console.error(error);
 
     res.status(500).json({
-      error: "Error en análisis"
+      error: "Error generando comparación"
     });
 
   }

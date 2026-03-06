@@ -2,16 +2,19 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const { graphqlHTTP } = require("express-graphql");
 
+const schema = require("./graphql/schema");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 
-const cityRoutes = require("./routes/cityRoutes");
+//const cityRouters = require("./routes/cityRoutes");
+const cityRouters = require("./routes/cityRouters");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const analysisRoutes = require("./routes/analysisRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const authRoutes = require("./routes/authRoutes");
-
+const presentationRoutes = require("./routes/presentationRoutes");
 const app = express();
 
 // ===============================
@@ -23,7 +26,8 @@ app.use(express.json());
 
 // UTF8
 app.use((req, res, next) => {
-  res.setHeader("Charset", "utf-8");
+  res.setHeader("Content-Type", "charset=utf-8");
+  //res.setHeader("Content-Type", "application/json: charset=utf-8");
   next();
 });
 
@@ -43,10 +47,16 @@ app.use("/api/auth", authRoutes);
 // ROUTES
 // ===============================
 
-app.use("/api/cities", cityRoutes);
+//app.use("/api/cities", cityRoutes);
+app.use("/api/cities", cityRouters);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/analysis", analysisRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/presentation", presentationRoutes);
+app.use("/graphql", graphqlHTTP({
+  schema,
+  graphiql: true
+}));
 
 // ===============================
 // HEALTH

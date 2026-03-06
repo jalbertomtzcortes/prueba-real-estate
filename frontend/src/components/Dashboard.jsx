@@ -16,10 +16,7 @@ export default function Dashboard({ onLogout }) {
 
       const storedUser = localStorage.getItem("user");
 
-      if (!storedUser) {
-        console.log("No hay usuario en localStorage");
-        return;
-      }
+      if (!storedUser) return;
 
       const parsedUser = JSON.parse(storedUser);
 
@@ -34,6 +31,7 @@ export default function Dashboard({ onLogout }) {
   }, []);
 
   return (
+
     <div className="h-screen bg-[#0f0f14] text-white flex flex-col">
 
       {/* HEADER */}
@@ -50,7 +48,6 @@ export default function Dashboard({ onLogout }) {
             setAgentType={setAgentType}
           />
 
-          {/* USER MENU */}
           <div className="relative">
 
             <button
@@ -64,8 +61,8 @@ export default function Dashboard({ onLogout }) {
               <div className="absolute right-0 mt-2 w-48 bg-[#1a1a22] border border-gray-700 rounded-lg">
 
                 <div className="px-4 py-3 text-sm border-b border-gray-700">
-                  <p className="font-semibold">{user?.name || "Usuario"}</p>
-                  <p className="text-gray-400 text-xs">{user?.role || "-"}</p>
+                  <p className="font-semibold">{user?.name}</p>
+                  <p className="text-gray-400 text-xs">{user?.role}</p>
                 </div>
 
                 <button
@@ -81,6 +78,7 @@ export default function Dashboard({ onLogout }) {
           </div>
 
         </div>
+
       </div>
 
       {/* MAIN */}
@@ -99,6 +97,8 @@ export default function Dashboard({ onLogout }) {
         </div>
 
       </div>
+
     </div>
+
   );
 }
