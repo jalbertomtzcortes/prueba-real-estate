@@ -116,4 +116,5 @@ query {
 
 ## Documentación Adicional
 - Uso app: [docs/05_uso_app_consultor_bi.md](docs/05_uso_app_consultor_bi.md)
-- Arquitectura ejecutiva: [docs/06_resumen_ejecutivo_arquitectura.md](docs/06_resumen_ejecutivo_arquitectura.md)
+
+
