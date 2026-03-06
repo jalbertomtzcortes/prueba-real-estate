@@ -44,6 +44,7 @@ services:
     restart: always
     env_file:
       - .env
+      - ./backend/.env
     ports:
       - "4000:4000"
     depends_on:

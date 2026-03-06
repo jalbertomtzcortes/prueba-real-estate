@@ -1,64 +1,45 @@
 import React from "react";
-import { useEffect, useState } from "react";
-import axios from "axios";
 
-export default function AgentSelector({ onSelectAgent, selectedCity, setSelectedCity }) {
+const BuildingIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" aria-hidden="true">
+    <path d="M4 20V6l8-3 8 3v14" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M9 10h2m-2 4h2m4-4h2m-2 4h2M10 20v-3h4v3" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+);
 
-  const [cities, setCities] = useState([]);
+const ChartIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" aria-hidden="true">
+    <path d="M4 20h16M7 16V9m5 7V5m5 11v-4" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+);
 
-  useEffect(() => {
-    const fetchCities = async () => {
-      try {
-
-        const res = await axios.get("http://localhost:4000/api/cities");
-
-        if (Array.isArray(res.data)) {
-          setCities(res.data);
-        } else {
-          setCities([]);
-        }
-
-      } catch (error) {
-        console.error("Error loading cities:", error);
-        setCities([]);
-      }
-    };
-
-    fetchCities();
-  }, []);
+export default function AgentSelector({ agentType, setAgentType }) {
+  const buttonClass = (type) =>
+    `px-4 py-2 rounded-lg border transition flex items-center gap-2 ${
+      agentType === type
+        ? "bg-white text-black border-white"
+        : "bg-transparent text-gray-200 border-gray-700 hover:border-gray-500"
+    }`;
 
   return (
-
-    <div style={{ marginBottom: 20 }}>
-
-      <h3>Seleccionar ciudad</h3>
-
-      <select
-        value={selectedCity || ""}
-        onChange={(e) => setSelectedCity(e.target.value)}
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        className={buttonClass("consultor")}
+        onClick={() => setAgentType("consultor")}
       >
-        <option value="">Selecciona ciudad</option>
+        <BuildingIcon />
+        Consultor Inmobiliario
+      </button>
 
-        {cities?.map((city) => (
-          <option key={city.id} value={city.name}>
-            {city.name}
-          </option>
-        ))}
-
-      </select>
-
-      <div style={{ marginTop: 20 }}>
-
-        <button onClick={() => onSelectAgent("bi")}>
-          BI Dashboard
-        </button>
-
-        <button onClick={() => onSelectAgent("real_estate")}>
-          Agente Inmobiliario
-        </button>
-
-      </div>
-
+      <button
+        type="button"
+        className={buttonClass("bi")}
+        onClick={() => setAgentType("bi")}
+      >
+        <ChartIcon />
+        Maestro de BI
+      </button>
     </div>
   );
 }

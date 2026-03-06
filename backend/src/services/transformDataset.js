@@ -1,19 +1,17 @@
 const path = require("path");
 const fs = require("fs");
-const iconv = require("iconv-lite");
 const { createObjectCsvWriter } = require("csv-writer");
+const normalizeEncoding = require("../utils/normalizeEncoding");
 
 
 const inputFile = path.join(__dirname, "../../../database/4S_DataSet_Confidential.csv");
-const outputFile = path.join(__dirname, "../../../database/dataset_clean.csv");
+const outputFiles = [
+  path.join(__dirname, "../../../database/dataset_clean.csv"),
+  path.join(__dirname, "../../src/dataset/dataset_clean.csv")
+];
 
-const rawBuffer = fs.readFileSync(inputFile);
-
-
-let raw = iconv.decode(rawBuffer, "latin1");
-
-
-raw = raw.replace(/^\uFEFF/, "").replace(/\r/g, "");
+let raw = fs.readFileSync(inputFile, "utf8");
+raw = normalizeEncoding(raw).replace(/\r/g, "");
 
 const lines = raw.split("\n").filter(l => l.trim() !== "");
 const headers = lines[0].split(",");
@@ -24,9 +22,9 @@ for (let i = 1; i < lines.length; i++) {
   const columns = lines[i].split(",");
   if (columns.length < 4) continue;
 
-  const city = columns[0]?.trim();
-  const zone = columns[1]?.trim();
-  const project = columns[2]?.trim();
+  const city = normalizeEncoding(columns[0] || "");
+  const zone = normalizeEncoding(columns[1] || "");
+  const project = normalizeEncoding(columns[2] || "");
 
   if (!city || !zone || !project) continue;
 
@@ -50,18 +48,20 @@ for (let i = 1; i < lines.length; i++) {
 }
 
 (async () => {
-  const csvWriter = createObjectCsvWriter({
-    path: outputFile,
-    header: [
-      { id: "city", title: "city" },
-      { id: "zone", title: "zone" },
-      { id: "project_name", title: "project_name" },
-      { id: "period", title: "period" },
-      { id: "price_per_m2", title: "price_per_m2" },
-    ],
-  });
+  for (const outputFile of outputFiles) {
+    const csvWriter = createObjectCsvWriter({
+      path: outputFile,
+      header: [
+        { id: "city", title: "city" },
+        { id: "zone", title: "zone" },
+        { id: "project_name", title: "project_name" },
+        { id: "period", title: "period" },
+        { id: "price_per_m2", title: "price_per_m2" },
+      ],
+    });
 
-  await csvWriter.writeRecords(results);
+    await csvWriter.writeRecords(results);
+  }
 
   console.log("Dataset transformado correctamente ✅");
   console.log("Total registros generados:", results.length);

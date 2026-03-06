@@ -1,11 +1,5 @@
 const pool = require("../config/database");
 
-// Corrige encoding automáticamente
-function fixCity(text) {
-  if (!text) return text;
-  return Buffer.from(text, "latin1").toString("utf8");
-}
-
 exports.chat = async (req, res) => {
   try {
     const { message } = req.body;
@@ -24,7 +18,7 @@ exports.chat = async (req, res) => {
 
       const cities = result.rows.map((row) => ({
         id: row.id,
-        name: fixCity(row.name),
+        name: row.name,
       }));
 
       return res.json({

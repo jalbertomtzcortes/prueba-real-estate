@@ -1,112 +1,119 @@
-# Real Estate Analytics Platform
+# Real Estate Intelligence Platform
 
-## Stack
-Backend Node + Express
-PostgreSQL
-Login JWT
-Frontend React
-Dashboard
-Chat AI
-Workspace
-Docker
-## IA - BOT
-Usuario  - ¿Qué ciudad tiene mayor precio promedio?
-BOT - responderá algo como:
+Plataforma de analítica inmobiliaria con:
+- Dashboard React con dos agentes (`Consultor Inmobiliario` y `Maestro BI`)
+- Backend Node.js/Express (REST + GraphQL)
+- PostgreSQL (modelo relacional)
+- Neo4j (grafo de conocimiento para traversal)
 
-Según los datos analizados, las ciudades con mayor precio promedio por m² son:
+## Arquitectura Rápida
+- `frontend/`: interfaz y flujos de agentes.
+- `backend/`: APIs, lógica de negocio, GraphQL, carga de Neo4j.
+- `database/`: inicialización SQL y datasets para bootstrap.
+- `docs/`: documentación funcional y ejecutiva.
 
-1. Ciudad de México
-2. Monterrey
-3. Guadalajara
+## Requisitos
+- Docker Desktop + Docker Compose v2
+- Puertos libres:
+  - `3000` (frontend)
+  - `4000` (backend)
+  - `5432` (postgres)
+  - `7474`, `7687` (neo4j)
 
-Ciudad de México presenta el mayor valor promedio, lo que refleja alta demanda y consolidación del mercado inmobiliario.
+## Variables de Entorno
 
-Para inversión patrimonial a largo plazo, CDMX sigue siendo el mercado más sólido.
+### 1) Archivo raíz `.env`
+```env
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=real_estate
+POSTGRES_DB=real_estate
+POSTGRES_HOST=postgres_db
+POSTGRES_PORT=5432
 
-BOT preguntas 
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=admin123
+NEO4J_URI=bolt://neo4j:7687
 
-¿Dónde conviene invertir?
-¿Qué ciudades tienen mayor crecimiento?
-Compara Guadalajara vs Monterrey
-## Levantar el proyecto
+BACKEND_PORT=4000
+```
 
-Como levantar el proyecto 
-- docker compose up --build
+### 2) Archivo `backend/.env`
+```env
+JWT_SECRET=replace_with_secure_secret
+OPENAI_API_KEY=replace_with_openai_key
+```
 
-Preguntar al Bot por CURL , POSTMAN
-curl -X POST http://localhost:4000/api/ai \
--H "Content-Type: application/json" \
--d '{"question":"Que ciudad tiene mayor precio promedio"}'
+## Levantar el Proyecto (Docker)
 
+Primera vez o si quieres reiniciar datos:
+```bash
+docker compose down -v
+docker compose up --build
+```
 
-## URL del proyecto
+Si ya tienes volúmenes y solo quieres levantar:
+```bash
+docker compose up --build
+```
 
-Front-end 
-http://localhost:3000
+## URLs
+- Frontend: `http://localhost:3000`
+- Backend (Swagger): `http://localhost:4000/api-docs`
+- GraphQL: `http://localhost:4000/graphql`
+- Neo4j Browser: `http://localhost:7474`
 
-Backend 
-http://localhost:4000/api-docs
+## Login
+- Email: `admin@example.com`
+- Password: `admin123`
 
-Neo4j
-http://localhost:7474
+## Flujos de la App
 
-##BI
+### Consultor Inmobiliario
+- Selecciona `Ciudad 1`, `Ciudad 2` y rango de años.
+- Genera una diapositiva ejecutiva con:
+  - Gráfico comparativo de precios
+  - Datos clave (promedios y crecimiento)
+  - Conclusiones ejecutivas
 
-🧠 Flujo BI 
+### Maestro BI
+- Selecciona ciudades y periodo.
+- Elige tipo de vista:
+  - `Comparativo`
+  - `Heatmap` por zonas y años
+  - `Tabla dinámica` (ordenable) con `Top N`
+- Permite exportar CSV desde la tabla dinámica.
 
-1️⃣ Bot:
+## Endpoints Principales
+- `POST /api/auth/login`
+- `GET /api/cities`
+- `GET /api/analytics/compare`
+- `GET /api/analytics/zone-evolution`
+- `POST /api/presentation/generate`
+- `POST /api/ai`
 
-Seleccione las ciudades a comparar
+## GraphQL
+Endpoint: `POST /graphql`
 
-API:
-
-GET /api/cities
-
-2️⃣ Usuario selecciona
-
-Monterrey
-Guadalajara
-
-3️⃣ Bot
-
-Seleccione periodo
-2021 - 2024
-
-4️⃣ Bot
-
-Seleccione tipo de gráfico
-
-Opciones:
-
-1 Line
-2 Bar
-3 Growth comparison
-
-5️⃣ API
-
-POST /api/analysis/compare-cities
-
-Body:
-
-{
-  "cityIds": [13,5],
-  "from": 2021,
-  "to": 2024
-}
-
-6️⃣ Backend responde
-
-[
-  {
-    "id": 13,
-    "name": "Monterrey",
-    "avg_price": 42000,
-    "growth_percentage": 35.2
-  },
-  {
-    "id": 5,
-    "name": "Guadalajara",
-    "avg_price": 38000,
-    "growth_percentage": 28.4
+Ejemplo:
+```graphql
+query {
+  projectsByCity(city: "Monterrey") {
+    city
+    zone
+    name
+    source
   }
-]
+}
+```
+
+## Troubleshooting
+- Si cambia estructura de dataset o encoding:
+  - reinicia con `docker compose down -v` y vuelve a levantar.
+- Si frontend muestra bundle antiguo:
+  - reconstruye con `docker compose up --build`.
+- Si Neo4j falla auth por datos viejos:
+  - elimina volúmenes (`down -v`) y vuelve a iniciar.
+
+## Documentación Adicional
+- Uso app: [docs/05_uso_app_consultor_bi.md](docs/05_uso_app_consultor_bi.md)
+- Arquitectura ejecutiva: [docs/06_resumen_ejecutivo_arquitectura.md](docs/06_resumen_ejecutivo_arquitectura.md)

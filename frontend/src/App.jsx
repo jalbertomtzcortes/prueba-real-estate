@@ -1,20 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Dashboard from "./components/Dashboard";
 import Login from "./pages/Login";
 
 function App() {
-
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const token = localStorage.getItem("token");
-
-    if (token && token !== "undefined") {
-      setIsAuthenticated(true);
-    }
-
-  }, []);
+    return Boolean(token && token !== "undefined");
+  });
 
   const handleLogin = (token, user) => {
 

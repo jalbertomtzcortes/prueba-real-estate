@@ -2,7 +2,7 @@ const app = require("./app");
 const loadData = require("./graphql/loadGraph");
 
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000;
 
 async function startServer() {
 
@@ -15,4 +15,3 @@ async function startServer() {
 }
 
 startServer();
-

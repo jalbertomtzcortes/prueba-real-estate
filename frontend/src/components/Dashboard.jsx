@@ -1,34 +1,42 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ChatPanel from "../components/ChatPanel";
 import Workspace from "../components/Workspace";
 import AgentSelector from "../components/AgentSelector";
 
-export default function Dashboard({ onLogout }) {
+const UserIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" aria-hidden="true">
+    <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M5 20a7 7 0 0 1 14 0" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+);
 
+const ShieldIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" aria-hidden="true">
+    <path d="M12 3 5 6v6c0 4.4 3 7.8 7 9 4-1.2 7-4.6 7-9V6l-7-3Z" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+);
+
+const LogoutIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4" aria-hidden="true">
+    <path d="M15 8l4 4-4 4M19 12H9" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+);
+
+export default function Dashboard({ onLogout }) {
   const [agentType, setAgentType] = useState("consultor");
   const [analysisData, setAnalysisData] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-
+  const [user] = useState(() => {
     try {
-
       const storedUser = localStorage.getItem("user");
-
       if (!storedUser) return;
-
-      const parsedUser = JSON.parse(storedUser);
-
-      setUser(parsedUser);
-
+      return JSON.parse(storedUser);
     } catch (error) {
-
       console.error("Error leyendo usuario:", error);
-
+      return null;
     }
-
-  }, []);
+  });
 
   return (
 
@@ -52,8 +60,9 @@ export default function Dashboard({ onLogout }) {
 
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="bg-gray-800 px-4 py-2 rounded-lg"
+              className="bg-gray-800 px-4 py-2 rounded-lg flex items-center gap-2"
             >
+              <UserIcon />
               {user?.name || "Usuario"} ⌄
             </button>
 
@@ -62,13 +71,17 @@ export default function Dashboard({ onLogout }) {
 
                 <div className="px-4 py-3 text-sm border-b border-gray-700">
                   <p className="font-semibold">{user?.name}</p>
-                  <p className="text-gray-400 text-xs">{user?.role}</p>
+                  <p className="text-gray-400 text-xs flex items-center gap-1">
+                    <ShieldIcon />
+                    {user?.role || "Administrador"}
+                  </p>
                 </div>
 
                 <button
                   onClick={onLogout}
-                  className="w-full text-left px-4 py-3 hover:bg-red-600"
+                  className="w-full text-left px-4 py-3 hover:bg-red-600 flex items-center gap-2"
                 >
+                  <LogoutIcon />
                   Cerrar sesión
                 </button>
 
