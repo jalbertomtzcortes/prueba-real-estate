@@ -38,7 +38,7 @@ export default function AgentSelector({ agentType, setAgentType }) {
         onClick={() => setAgentType("bi")}
       >
         <ChartIcon />
-        Maestro de BI
+        Maestro BI
       </button>
     </div>
   );

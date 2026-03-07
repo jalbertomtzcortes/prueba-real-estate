@@ -7,9 +7,6 @@ const STAGES = {
   AWAIT_CITY_1: "await_city_1",
   AWAIT_CITY_2: "await_city_2",
   AWAIT_DATES: "await_dates",
-  AWAIT_CHANGE_DECISION: "await_change_decision",
-  AWAIT_CHANGE_SLOT: "await_change_slot",
-  AWAIT_NEW_CITY: "await_new_city",
   ERROR: "error",
 };
 
@@ -44,38 +41,6 @@ const parseYearRange = (message = "") => {
   return null;
 };
 
-const isYesIntent = (message = "") => {
-  const normalized = normalizeText(message);
-  return (
-    normalized === "si" ||
-    normalized === "sí" ||
-    normalized === "yes" ||
-    normalized.includes("si quiero") ||
-    normalized.includes("cambiar")
-  );
-};
-
-const isNoIntent = (message = "") => {
-  const normalized = normalizeText(message);
-  return (
-    normalized === "no" ||
-    normalized.includes("no gracias") ||
-    normalized.includes("no cambiar") ||
-    normalized.includes("mantener")
-  );
-};
-
-const extractCitySlot = (message = "") => {
-  const normalized = normalizeText(message);
-  if (normalized.includes("1") || normalized.includes("uno") || normalized.includes("ciudad 1")) {
-    return "city1";
-  }
-  if (normalized.includes("2") || normalized.includes("dos") || normalized.includes("ciudad 2")) {
-    return "city2";
-  }
-  return null;
-};
-
 const isShowCitiesCommand = (message = "") => {
   const normalized = normalizeText(message);
   return (
@@ -92,6 +57,12 @@ const toChartData = (history = []) =>
     avg_price: Number(row.avg_price),
     period: String(row.year),
     price_per_m2: Number(row.avg_price),
+  }));
+
+const toSingleCitySeries = (city, history = []) =>
+  history.map((row) => ({
+    year: String(row.year),
+    [city]: Number(row.avg_price),
   }));
 
 const computeGrowth = (history = []) => {
@@ -135,6 +106,14 @@ const buildExecutiveConclusions = ({ cityA, cityB, growthA, growthB, avgA, avgB 
   ];
 };
 
+const buildSingleCityInsights = ({ city, growth, average, from, to }) => {
+  return [
+    `${city} registró un crecimiento de ${Number(growth || 0).toFixed(2)}% entre ${from} y ${to}.`,
+    `El precio promedio estimado fue de ${Number(average || 0).toFixed(0)} USD/m2 durante el periodo analizado.`,
+    `Insight clave: ${Number(growth || 0) >= 0 ? "la tendencia es favorable para seguimiento comercial e inversión." : "el mercado requiere cautela por la desaceleración observada."}`,
+  ];
+};
+
 export default function ChatPanel({ agentType, setAnalysisData }) {
   const [cities, setCities] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -146,7 +125,6 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
     from: "",
     to: "",
     stage: STAGES.AWAIT_CITY_1,
-    pendingCitySlot: null,
   });
 
   const addBotMessage = (text) => {
@@ -181,15 +159,15 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
   };
 
   const bootConversation = (loadedCities) => {
-    const agentName = agentType === "bi" ? "Maestro BI" : "Consultor Inmobiliario";
+    const introMessage = agentType === "bi"
+      ? 'Maestro BI activo. Escribe "ver ciudades" Generar el Grafico.\nDespués escribe la Ciudad 1.'
+      : 'Consultor Inmobiliario activo. Escribe "ver ciudades" para ver el catálogo.\nDespués escribe una ciudad.';
 
     setAnalysisData(null);
     setMessages([
       {
         sender: "bot",
-        text:
-          `${agentName} activo. Escribe "ver ciudades" para ver el catálogo.\n` +
-          "Después escribe la Ciudad 1.",
+        text: introMessage,
       },
     ]);
 
@@ -199,7 +177,6 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
       from: "",
       to: "",
       stage: loadedCities.length ? STAGES.AWAIT_CITY_1 : STAGES.ERROR,
-      pendingCitySlot: null,
     });
 
     if (!loadedCities.length) {
@@ -225,7 +202,7 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentType, setAnalysisData]);
 
-  const runFlow = async ({ city1, city2, from, to }) => {
+  const runBiFlow = async ({ city1, city2, from, to }) => {
     const city1Obj = cities.find((city) => city.name === city1);
     const city2Obj = cities.find((city) => city.name === city2);
 
@@ -344,13 +321,95 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
     }
   };
 
-  const promptForDates = () => {
-    addBotMessage("Ahora escribe el rango de fechas. Ejemplo: 2021-2024");
+  const runConsultorFlow = async ({ city1, from, to }) => {
+    const city = cities.find((item) => item.name === city1);
+
+    if (!city) {
+      addBotMessage("Necesito una ciudad válida.");
+      return false;
+    }
+
+    setLoading(true);
+
+    try {
+      const historyResponse = await axios.get(`${API_URL}/analytics/city-history`, {
+        params: {
+          cityId: city.id,
+          from,
+          to,
+        },
+      });
+
+      const history = historyResponse?.data?.history || [];
+      const average = computeAverage(history);
+      const growth = computeGrowth(history);
+
+      let aiInsights = [];
+      let presentation = null;
+      let usedAiPresentation = false;
+
+      try {
+        const response = await axios.post(`${API_URL}/presentation/generate`, {
+          city: {
+            name: city1,
+            growth_percentage: Number(growth || 0).toFixed(2),
+            average_price: Number(average || 0).toFixed(2),
+          },
+          from,
+          to,
+        });
+
+        presentation = response.data;
+        aiInsights = Array.isArray(response?.data?.insights)
+          ? response.data.insights.filter(Boolean).slice(0, 3)
+          : [];
+        usedAiPresentation = aiInsights.length > 0 || (response?.data?.slides || []).length > 0;
+
+        if (!aiInsights.length) {
+          aiInsights = (response?.data?.slides || [])
+            .map((slide) => slide.content)
+            .filter(Boolean)
+            .slice(0, 3);
+        }
+      } catch (error) {
+        console.error("No fue posible generar presentación con IA:", error);
+      }
+
+      const finalInsights = aiInsights.length
+        ? aiInsights
+        : buildSingleCityInsights({ city: city1, growth, average, from, to });
+
+      setAnalysisData({
+        title: `Diapositiva IA: ${city1}`,
+        city1,
+        from,
+        to,
+        chartData: toSingleCitySeries(city1, history),
+        average,
+        growth,
+        executiveConclusions: finalInsights,
+        presentation,
+      });
+
+      addBotMessage(
+        `${usedAiPresentation
+          ? `La IA ha generado la diapositiva de ${city1} (${from}-${to}).`
+          : `Generé la diapositiva de ${city1} (${from}-${to}) con insights base porque la IA no estuvo disponible.`}\n` +
+          finalInsights.slice(0, 3).map((item, idx) => `${idx + 1}. ${item}`).join("\n")
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error en flujo de consultor:", error);
+      addBotMessage("No pude completar la diapositiva con esos parámetros. Intenta de nuevo.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const promptCycle = () => {
-    addBotMessage("¿Deseas cambiar ciudades? Responde: sí o no.");
-    setContext((prev) => ({ ...prev, stage: STAGES.AWAIT_CHANGE_DECISION, pendingCitySlot: null }));
+  const promptForDates = () => {
+    addBotMessage("Ahora escribe el rango de fechas. Ejemplo: 2021-2024");
   };
 
   const handleMessage = async (rawMessage) => {
@@ -363,7 +422,11 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
       addBotMessage(`Ciudades disponibles:\n${formatCitiesList(cities)}`);
 
       if (context.stage === STAGES.AWAIT_CITY_1) {
-        addBotMessage('Escribe la Ciudad 1 (nombre o número).');
+        addBotMessage(
+          agentType === "bi"
+            ? 'Escribe la Ciudad 1 (nombre o número).'
+            : 'Escribe una ciudad (nombre o número).'
+        );
       } else if (context.stage === STAGES.AWAIT_CITY_2) {
         addBotMessage('Escribe la Ciudad 2 (nombre o número).');
       }
@@ -379,12 +442,23 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
     if (context.stage === STAGES.AWAIT_CITY_1) {
       const city = findCityFromMessage(message);
       if (!city) {
-        addBotMessage('No reconocí esa ciudad. Escribe "ver ciudades" y luego indica Ciudad 1.');
+        addBotMessage(
+          agentType === "bi"
+            ? 'No reconocí esa ciudad. Escribe "ver ciudades" y luego indica Ciudad 1.'
+            : 'No reconocí esa ciudad. Escribe "ver ciudades" y luego indica una ciudad.'
+        );
         return;
       }
 
-      setContext((prev) => ({ ...prev, city1: city.name, stage: STAGES.AWAIT_CITY_2 }));
-      addBotMessage(`Ciudad 1 seleccionada: ${city.name}. Ahora escribe la Ciudad 2.`);
+      if (agentType === "bi") {
+        setContext((prev) => ({ ...prev, city1: city.name, stage: STAGES.AWAIT_CITY_2 }));
+        addBotMessage(`Ciudad 1 seleccionada: ${city.name}. Ahora escribe la Ciudad 2.`);
+        return;
+      }
+
+      setContext((prev) => ({ ...prev, city1: city.name, stage: STAGES.AWAIT_DATES }));
+      addBotMessage(`Ciudad seleccionada: ${city.name}.`);
+      promptForDates();
       return;
     }
 
@@ -415,88 +489,36 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
 
       setContext((prev) => ({ ...prev, from: range.from, to: range.to }));
 
-      const success = await runFlow({
-        city1: context.city1,
-        city2: context.city2,
-        from: range.from,
-        to: range.to,
-      });
-
-      if (success) {
-        promptCycle();
-      } else {
-        setContext((prev) => ({ ...prev, stage: STAGES.AWAIT_DATES }));
-      }
-      return;
-    }
-
-    if (context.stage === STAGES.AWAIT_CHANGE_DECISION) {
-      if (isYesIntent(message)) {
-        setContext((prev) => ({ ...prev, stage: STAGES.AWAIT_CHANGE_SLOT }));
-        addBotMessage('¿Qué quieres cambiar? Escribe: "ciudad 1" o "ciudad 2".');
-        return;
-      }
-
-      if (isNoIntent(message)) {
-        setContext((prev) => ({ ...prev, stage: STAGES.AWAIT_DATES }));
-        addBotMessage(`Mantengo ciudades: ${context.city1} y ${context.city2}.`);
-        promptForDates();
-        return;
-      }
-
-      addBotMessage('Responde con "sí" o "no" para indicar si cambiarás ciudades.');
-      return;
-    }
-
-    if (context.stage === STAGES.AWAIT_CHANGE_SLOT) {
-      const slot = extractCitySlot(message);
-      if (!slot) {
-        addBotMessage('Indica "ciudad 1" o "ciudad 2".');
-        return;
-      }
-
-      setContext((prev) => ({ ...prev, pendingCitySlot: slot, stage: STAGES.AWAIT_NEW_CITY }));
-      addBotMessage(`Escribe la nueva ${slot === "city1" ? "Ciudad 1" : "Ciudad 2"}.`);
-      return;
-    }
-
-    if (context.stage === STAGES.AWAIT_NEW_CITY) {
-      const city = findCityFromMessage(message);
-      if (!city) {
-        addBotMessage('No reconocí esa ciudad. Escribe "ver ciudades" y luego la ciudad correcta.');
-        return;
-      }
-
-      const slot = context.pendingCitySlot;
-      if (!slot) {
-        setContext((prev) => ({ ...prev, stage: STAGES.AWAIT_CHANGE_SLOT }));
-        addBotMessage('No pude identificar qué ciudad cambiar. Escribe: ciudad 1 o ciudad 2.');
-        return;
-      }
-
-      if (slot === "city1" && city.name === context.city2) {
-        addBotMessage('Ciudad 1 debe ser distinta de Ciudad 2. Escribe otra ciudad.');
-        return;
-      }
-
-      if (slot === "city2" && city.name === context.city1) {
-        addBotMessage('Ciudad 2 debe ser distinta de Ciudad 1. Escribe otra ciudad.');
-        return;
-      }
+      const success = agentType === "bi"
+        ? await runBiFlow({
+            city1: context.city1,
+            city2: context.city2,
+            from: range.from,
+            to: range.to,
+          })
+        : await runConsultorFlow({
+            city1: context.city1,
+            from: range.from,
+            to: range.to,
+          });
 
       setContext((prev) => ({
         ...prev,
-        city1: slot === "city1" ? city.name : prev.city1,
-        city2: slot === "city2" ? city.name : prev.city2,
-        pendingCitySlot: null,
-        stage: STAGES.AWAIT_DATES,
+        city1: "",
+        city2: "",
+        from: range.from,
+        to: range.to,
+        stage: success ? STAGES.AWAIT_CITY_1 : STAGES.AWAIT_DATES,
       }));
 
-      addBotMessage(
-        `Actualizado: Ciudad 1 = ${slot === "city1" ? city.name : context.city1}, ` +
-          `Ciudad 2 = ${slot === "city2" ? city.name : context.city2}.`
-      );
-      promptForDates();
+      if (success) {
+        addBotMessage(
+          agentType === "bi"
+            ? 'Puedes generar otro gráfico. Escribe "ver ciudades" o selecciona la Ciudad 1.'
+            : 'Puedes generar otra diapositiva. Escribe "ver ciudades" o selecciona otra ciudad.'
+        );
+      }
+      return;
     }
   };
 
@@ -510,13 +532,13 @@ export default function ChatPanel({ agentType, setAnalysisData }) {
   return (
     <div className="h-full rounded-2xl border border-gray-800 bg-[#15151a] p-5 flex flex-col">
       <h2 className="text-2xl font-bold text-white mb-2">
-        {agentType === "bi" ? "Maestro de BI" : "Consultor Inmobiliario"}
+        {agentType === "bi" ? "Maestro BI" : "Consultor Inmobiliario"}
       </h2>
 
       <p className="text-lg text-white mb-4 leading-relaxed">
         {agentType === "bi"
-          ? 'Flujo por chat: escribe mensajes como "ver ciudades" para comprar'
-          : 'Flujo por chat: escribe mensajes como "ver ciudades" nada mas.'}
+          ? 'Maestro BI activo. Escribe "ver ciudades" Generar el Grafico'
+          : 'Consultor Inmobiliario activo. Escribe "ver ciudades" para ver el catálogo.'}
       </p>
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">

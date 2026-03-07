@@ -62,6 +62,48 @@ exports.compareCities = async (req, res) => {
 
 };
 
+exports.cityHistory = async (req, res) => {
+  try {
+    const { cityId, from, to } = req.query;
+
+    const fromDate = `${from}-01-01`;
+    const toDate = `${to}-12-31`;
+
+    const result = await pool.query(
+      `
+      SELECT
+        c.id AS city_id,
+        c.name AS city,
+        EXTRACT(YEAR FROM ph.period)::int AS year,
+        ROUND(AVG(ph.price_per_m2), 2) AS avg_price
+      FROM price_history ph
+      JOIN projects p ON ph.project_id = p.id
+      JOIN zones z ON p.zone_id = z.id
+      JOIN cities c ON z.city_id = c.id
+      WHERE c.id = $1
+        AND ph.period BETWEEN $2 AND $3
+      GROUP BY c.id, c.name, year
+      ORDER BY year
+      `,
+      [cityId, fromDate, toDate]
+    );
+
+    res.json({
+      cityId: Number(cityId),
+      city: result.rows[0]?.city || null,
+      history: result.rows.map((row) => ({
+        year: Number(row.year),
+        avg_price: Number(row.avg_price),
+      })),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Error obteniendo histórico de la ciudad",
+    });
+  }
+};
+
 exports.zoneEvolution = async (req, res) => {
   try {
     const { city1, city2, from, to } = req.query;

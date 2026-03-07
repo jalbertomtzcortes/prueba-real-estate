@@ -4,13 +4,7 @@ exports.generatePresentation = async (req, res) => {
 
   try {
 
-    const { city1, city2, growth } = req.body;
-
-    const presentation = await openaiService.createPresentation(
-      city1,
-      city2,
-      growth
-    );
+    const presentation = await openaiService.createPresentation(req.body);
 
     res.json(presentation);
 

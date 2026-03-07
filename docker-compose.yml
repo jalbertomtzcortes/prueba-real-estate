@@ -35,8 +35,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "cypher-shell -a bolt://localhost:7687 -u ${NEO4J_USER} -p ${NEO4J_PASSWORD} 'RETURN 1;' > /dev/null 2>&1"]
       interval: 10s
-      timeout: 5s
-      retries: 10
+      timeout: 15s
+      retries: 12
 
   backend:
     build: ./backend
@@ -45,6 +45,8 @@ services:
     env_file:
       - .env
       - ./backend/.env
+    environment:
+      LOAD_GRAPH_ON_STARTUP: "false"
     ports:
       - "4000:4000"
     depends_on:

@@ -24,6 +24,8 @@ export default function Workspace({ agentType, data }) {
         title={data.title}
         city1={data.city1}
         city2={data.city2}
+        from={data.from}
+        to={data.to}
         growth={data.growth}
         growthCity2={data.growthCity2}
         average={data.average}
