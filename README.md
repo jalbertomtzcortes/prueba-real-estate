@@ -60,6 +60,11 @@ Si ya tienes volúmenes y solo quieres levantar:
 docker compose up --build
 ```
 
+Si quieres levantar en segundo plano:
+```bash
+docker compose up -d --build
+```
+
 ## URLs
 - Frontend: `http://localhost:3000`
 - Backend (Swagger): `http://localhost:4000/api-docs`
@@ -73,23 +78,42 @@ docker compose up --build
 ## Flujos de la App
 
 ### Consultor Inmobiliario
-- Selecciona `Ciudad 1`, `Ciudad 2` y rango de años.
-- Genera una diapositiva ejecutiva con:
-  - Gráfico comparativo de precios
-  - Datos clave (promedios y crecimiento)
-  - Conclusiones ejecutivas
+- Mensaje inicial en chat:
+  - `Consultor Inmobiliario activo. Escribe "ver ciudades" para ver el catálogo.`
+- Flujo:
+  - Escribe `ver ciudades`
+  - Selecciona una sola ciudad
+  - Escribe el rango de fechas, por ejemplo `2021-2024`
+- Resultado:
+  - Diapositiva ejecutiva de una ciudad
+  - Gráfico histórico de precios de esa ciudad
+  - Crecimiento y precio promedio del periodo
+  - `3 factores clave` o insights
+- Si OpenAI no está disponible o no tiene cuota:
+  - el sistema usa insights base y mantiene el flujo operativo
 
 ### Maestro BI
-- Selecciona ciudades y periodo.
-- Elige tipo de vista:
+- Mensaje inicial en chat:
+  - `Maestro BI activo. Escribe "ver ciudades" Generar el Grafico`
+- Flujo:
+  - Escribe `ver ciudades`
+  - Selecciona `Ciudad 1`
+  - Selecciona `Ciudad 2`
+  - Escribe el rango de fechas, por ejemplo `2021-2024`
+- Resultado:
+  - Gráfico comparativo entre dos ciudades
+  - Promedios y crecimiento del periodo
+  - Datos de zonas para vistas BI
+- La vista BI soporta:
   - `Comparativo`
   - `Heatmap` por zonas y años
-  - `Tabla dinámica` (ordenable) con `Top N`
-- Permite exportar CSV desde la tabla dinámica.
+  - `Tabla dinámica` ordenable con `Top N`
+  - Exportación CSV desde tabla
 
 ## Endpoints Principales
 - `POST /api/auth/login`
 - `GET /api/cities`
+- `GET /api/analytics/city-history`
 - `GET /api/analytics/compare`
 - `GET /api/analytics/zone-evolution`
 - `POST /api/presentation/generate`
@@ -120,6 +144,10 @@ query {
   - reconstruye frontend para regenerar `dist`.
 - Si Neo4j falla auth por datos viejos:
   - elimina volúmenes (`down -v`) y vuelve a iniciar.
+- Si la presentación IA falla:
+  - valida `OPENAI_API_KEY` en `backend/.env`
+  - revisa cuota/disponibilidad de OpenAI
+  - el consultor seguirá mostrando una diapositiva con insights base
 
 ## Documentación Adicional
 - Uso app: [docs/05_uso_app_consultor_bi.md](docs/05_uso_app_consultor_bi.md)
